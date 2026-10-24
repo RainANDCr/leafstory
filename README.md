@@ -4,8 +4,18 @@
 > 两个人的私密恋爱日记：每篇日记化作一片叶子，回忆沉淀成故事书，
 > 一只小猴子守护着你们的记忆。
 
-**当前进度：阶段 5（AI 故事编辑师·BYOK）代码已完成，本地模式可直接体验（含演示模式）。**
-路线：0 骨架 ✅ → 1 账户/日记/纪念日 ✅ → 2 树+故事书 ✅ → 3 心愿瓶+时光邮局 ✅ → 4 地图+问答 ✅ → 5 AI（已实现）→ 6 年度金叶+导出 → 7 部署+Android APK → 8（可选）Windows。
+**当前进度：阶段 0–7 全部完成（Windows EXE 可选阶段 8 未做）。**
+路线：0 骨架 ✅ → 1 账户/日记/纪念日 ✅ → 2 树+故事书 ✅ → 3 心愿瓶+时光邮局 ✅ → 4 地图+问答 ✅ → 5 AI（BYOK）✅ → 6 年度金叶+导出+数据管理 ✅ → 7 测试+部署+Android ✅ → 8（可选）Windows。
+
+| 命令 | 说明 |
+|---|---|
+| `npm run dev` | 开发服务器 |
+| `npm run build` | 类型检查 + 生产构建（输出 `dist/`） |
+| `npm run preview` | 本地预览生产构建 |
+| `npm run lint` / `npm run typecheck` | ESLint / TypeScript 严格检查 |
+| `npm run test` | Vitest 单元测试（18 文件 101 用例） |
+| `npm run test:e2e` | Playwright E2E（本地模式关键路径） |
+| `npx cap sync android` | 同步 Web 构建到 Android 工程（见 docs/ANDROID_BUILD.md） |
 
 ## 技术栈
 
@@ -105,3 +115,9 @@ docs/          PROJECT_BRIEF / ARCHITECTURE / DATA_MODEL / SECURITY / CHANGELOG
 - **服务端中转（可选）**：`supabase/functions/ai-polish` 提供带主机白名单（防 SSRF）、体积/超时限制、零日志的中转实现；部署后把地址填入环境变量 `VITE_AI_PROXY_URL` 即走中转，不部署则浏览器直连你自己的服务。
 
 常用服务商（OpenAI 兼容端点）：OpenAI、OpenRouter、DeepSeek、Moonshot、阿里云百炼、SiliconFlow。费用与数据政策以各服务商为准。
+
+## 部署与打包
+
+- **网站**：`vercel.json` 与 `public/_redirects` 已就绪，步骤见 [docs/WEB_DEPLOYMENT.md](docs/WEB_DEPLOYMENT.md)（Vercel / Cloudflare Pages）。
+- **Android APK**：`android/` 工程已生成（app.leafstory.diary），在装有 Android Studio 的电脑上按 [docs/ANDROID_BUILD.md](docs/ANDROID_BUILD.md) 构建；本仓库未实际打包（本机无 Android SDK，如实说明）。
+- **发布前逐项核对**：[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)（含可直接使用的隐私声明）。

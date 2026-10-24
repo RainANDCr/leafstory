@@ -2,6 +2,25 @@
 
 格式参考 keepachangelog.com；阶段号与《落叶物语全阶段开发提示词》一致。
 
+## [1.0.0] · 阶段 7 —— 回归测试、部署准备与 Android 工程（2026-10-25）
+
+### 新增
+
+- **E2E 测试（Playwright + Chromium）**：`npm run test:e2e`——本地模式关键路径全链路（注册→配对→写日记→树上长新叶→纪念日→月度故事→心愿完成（落叶动效）→信件封存（未到期无开启按钮）→跨账号私密日记不可见→导出入口），手机宽度视口（390×844）下实测通过。
+- **Android 工程（Capacitor）**：`@capacitor/core/cli/android` + `capacitor.config.ts`（app.leafstory.diary / 落叶物语 / webDir=dist），`android/` 原生工程已生成并入库；**APK 未实际构建**（本机无 Android SDK/JDK，构建步骤见 docs/ANDROID_BUILD.md）。
+- **纪念日本地提醒**：`@capacitor/local-notifications` + 平台适配层 Android 实现（运行时授权、未来 30 天纪念日当天 09:00、幂等重排）；设置 → 偏好开关（默认关、Web 端如实提示不支持）；调度纯函数 4 组单测。
+- **部署就绪**：`vercel.json`（SPA rewrite）+ `public/_redirects`（Cloudflare）+ docs/WEB_DEPLOYMENT.md（迁移顺序、Auth/Storage 校验、变量清单、回滚）。
+- **docs/ANDROID_BUILD.md**（环境/调试 APK/签名 release/keystore 备份/行为说明）与 **docs/RELEASE_CHECKLIST.md**（实测✅/待确认⚠️/未做❌ 三态清单 + 可直接发布的隐私声明 + 许可说明）。
+
+### 修复（上线审查发现）
+
+- 足迹页地点卡中的日记链接误用 hash 路由（`#/diary/…`），在 BrowserRouter 下无法导航——改为 Link。
+- Vitest 误收集 Playwright 用例——test.exclude 排除 e2e/。
+
+### 测试规模
+
+- 单测 18 文件 101 用例 + E2E 1 条关键路径，lint/typecheck/build 全绿。
+
 ## [0.7.0] · 阶段 6 —— 年度金叶 + 故事导出 + 数据管理（2026-10-25）
 
 ### 新增

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AiSettingsCard } from '@/features/ai/AiSettingsCard'
 import { DataManagementCard } from '@/features/settings/DataManagementCard'
+import { AnniversaryNotificationToggle } from '@/features/settings/AnniversaryNotificationToggle'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useCoupleSnapshot, partnerOf } from '@/features/couple/useCoupleSnapshot'
 import { getProfile, updateProfile, type Profile } from '@/services/profileService'
@@ -187,6 +188,12 @@ export function SettingsPage() {
         ) : (
           <p className="text-sm text-bark-soft">{t('common.loginRequired')}</p>
         )}
+      </Card>
+
+      {/* 偏好：纪念日提醒（Android 本地通知；Web 不支持，如实提示） */}
+      <Card className="mb-4">
+        <h2 className="mb-2 text-sm font-medium text-bark-soft">{t('settings.preferencesTitle')}</h2>
+        <AnniversaryNotificationToggle />
       </Card>
 
       {/* 二人空间 */}

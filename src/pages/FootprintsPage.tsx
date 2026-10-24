@@ -5,7 +5,7 @@
  * - 「纪念日」：阶段 1 的纪念日管理不变。
  */
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -322,9 +322,9 @@ export function FootprintsPage() {
                         {place.linkedDiaries.length > 0 ? (
                           <p className="mt-1.5 flex flex-wrap gap-2">
                             {place.linkedDiaries.map((d) => (
-                              <a key={d.id} href={`#/diary/${d.id}`} className="text-xs text-leaf-gold underline underline-offset-2">
+                              <Link key={d.id} to={`/diary/${d.id}`} className="text-xs text-leaf-gold underline underline-offset-2">
                                 🍂 {d.title || '无题'}
-                              </a>
+                              </Link>
                             ))}
                           </p>
                         ) : null}
