@@ -30,8 +30,10 @@ jobs:
       - name: Build (GitHub Pages 子路径 base)
         run: npm run build -- --base=/leafstory/
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # 两个均为「可公开的前端客户端值」；用仓库变量（Actions Variables）注入，
+          # 由 API 明文设置，避免本地安装加密依赖
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
