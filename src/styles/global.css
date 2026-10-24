@@ -51,3 +51,42 @@ body {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* 「新叶长出」：写完日记回到森林时，对应叶片播放一次生长动效。
+   prefers-reduced-motion 下由上方全局降级规则关闭动画，静态呈现。 */
+@keyframes leaf-grow {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.leaf-grow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: leaf-grow 0.9s ease-out both;
+}
+
+/* 故事书翻页：轻微的横向滑入 + 淡入（纸页感），降级规则同样生效 */
+@keyframes page-turn {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.page-turn {
+  animation: page-turn 0.35s ease-out both;
+}

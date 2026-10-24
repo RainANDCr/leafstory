@@ -17,6 +17,8 @@ export const LS_KEYS = {
   diaries: 'diaries',
   diaryMedia: 'diary_media',
   anniversaries: 'anniversaries',
+  storyBooks: 'story_books',
+  storyItems: 'story_book_items',
 } as const
 
 export function readJSON<T>(key: string, fallback: T): T {

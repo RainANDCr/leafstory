@@ -6,6 +6,8 @@ import { DiaryPage } from '@/pages/DiaryPage'
 import { DiaryEditorPage } from '@/pages/DiaryEditorPage'
 import { DiaryDetailPage } from '@/pages/DiaryDetailPage'
 import { StoryPage } from '@/pages/StoryPage'
+import { StoryMonthPage } from '@/pages/StoryMonthPage'
+import { StoryBookPage } from '@/pages/StoryBookPage'
 import { InteractPage } from '@/pages/InteractPage'
 import { FootprintsPage } from '@/pages/FootprintsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
@@ -29,6 +31,9 @@ function createAppRouter() {
             { path: 'diary/new', element: <DiaryEditorPage /> },
             { path: 'diary/:id', element: <DiaryDetailPage /> },
             { path: 'diary/:id/edit', element: <DiaryEditorPage /> },
+            { path: 'story', element: <StoryPage /> },
+            { path: 'story/month/:yearMonth', element: <StoryMonthPage /> },
+            { path: 'story/book/:id', element: <StoryBookPage /> },
             { path: 'footprints', element: <FootprintsPage /> },
             { path: 'settings', element: <SettingsPage /> },
             { path: 'pairing', element: <PairingPage /> },

@@ -196,7 +196,19 @@ function DiaryForm({ entryId, initial, coupleId, userId }: DiaryFormProps) {
         setSavedId(targetId)
         setError(zhCN.diary.errors.uploadFailed(failed.join('、')))
       } else if (targetId) {
-        navigate(`/diary/${targetId}`, { replace: true })
+        // 新写的「双方可见已发布」日记回到森林，树上长出新叶（一次性反馈）；
+        // 私密/草稿不进共享树，编辑则留在详情页。
+        const isFreshLeaf = !isEdit && visibility === 'shared' && status === 'published'
+        if (isFreshLeaf) {
+          try {
+            sessionStorage.setItem('leafstory:new-leaf', targetId)
+          } catch {
+            /* 隐私模式下 sessionStorage 不可用时静默跳过动效 */
+          }
+          navigate('/forest', { replace: true })
+        } else {
+          navigate(`/diary/${targetId}`, { replace: true })
+        }
       }
     } catch {
       setError(t('diary.errors.saveFailed'))

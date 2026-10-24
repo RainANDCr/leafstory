@@ -97,6 +97,20 @@ export async function listSharedDiariesForTree(limit = 200): Promise<DiaryEntry[
   return (data as EntryRow[]).map(toEntry)
 }
 
+/** 故事书数据源：当前用户可见的全部日记（按发生日期倒序，限量聚合） */
+export async function listVisibleDiariesForStory(limit = 500): Promise<DiaryEntry[]> {
+  if (!isSupabaseConfigured) return local.listVisibleDiariesForStory(limit)
+  const sb = requireSupabase()
+  const { data, error } = await sb
+    .from('diary_entries')
+    .select('id, couple_id, author_id, title, content, happened_on, mood, category, visibility, status, created_at, updated_at')
+    .order('happened_on', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return (data as EntryRow[]).map(toEntry)
+}
+
 async function getMedia(entryId: string): Promise<DiaryMedia[]> {
   const sb = requireSupabase()
   const { data, error } = await sb

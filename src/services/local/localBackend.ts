@@ -16,6 +16,7 @@ import type { Profile } from '../profileService'
 import type { CoupleInfo, CoupleSnapshot } from '../coupleService'
 import type { Anniversary, AnniversaryInput, AnniversaryKind } from '../anniversaryService'
 import type { DiaryDetail, DiaryPage } from '../diaryService'
+import type { StoryBook, StoryBookDetail, StoryBookInput } from '../storyService'
 import type { DiaryEntry, DiaryFilter, DiaryInput, DiaryMedia } from '@/features/diary/types'
 
 // ------------------------------------------------------------ 类型
@@ -449,6 +450,17 @@ export async function listSharedDiariesForTree(limit = 200): Promise<DiaryEntry[
   return all.map((row) => toEntry(row, rows.filter((r) => r.diaryEntryId === row.id).length))
 }
 
+/** 故事书数据源：当前用户可见的全部日记（按发生日期倒序，限量） */
+export async function listVisibleDiariesForStory(limit = 500): Promise<DiaryEntry[]> {
+  const userId = requireUserId()
+  const all = Object.values(readJSON<Record<string, LocalDiary>>(LS_KEYS.diaries, {}))
+    .filter((row) => visibleTo(row, userId))
+    .sort((a, b) => b.happenedOn.localeCompare(a.happenedOn) || b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit)
+  const rows = readJSON<LocalMediaRow[]>(LS_KEYS.diaryMedia, [])
+  return all.map((row) => toEntry(row, rows.filter((r) => r.diaryEntryId === row.id).length))
+}
+
 export async function getDiaryDetail(id: string): Promise<DiaryDetail> {
   const userId = requireUserId()
   const row = readJSON<Record<string, LocalDiary>>(LS_KEYS.diaries, {})[id]
@@ -655,4 +667,149 @@ export async function deleteAnniversary(id: string): Promise<void> {
   if (!row || !mine || row.coupleId !== mine.coupleId) throw new Error('NOT_FOUND')
   delete rows[id]
   writeJSON(LS_KEYS.anniversaries, rows)
+}
+
+// ------------------------------------------------------------ 故事书（自定义专题）
+
+interface LocalStoryBook {
+  id: string
+  coupleId: string
+  title: string
+  intro: string | null
+  coverMood: string | null
+  position: number
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface LocalStoryItem {
+  id: string
+  bookId: string
+  entryId: string
+  position: number
+  createdAt: string
+}
+
+function toStoryBook(row: LocalStoryBook): StoryBook {
+  return {
+    id: row.id,
+    coupleId: row.coupleId,
+    title: row.title,
+    intro: row.intro,
+    coverMood: row.coverMood,
+    position: row.position,
+    createdBy: row.createdBy,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
+
+function requireCoupleId(): string {
+  const mine = myMembership(requireUserId())
+  if (!mine) throw new Error('NOT_FOUND')
+  return mine.coupleId
+}
+
+export async function listStoryBooks(coupleId: string): Promise<StoryBook[]> {
+  if (requireCoupleId() !== coupleId) return []
+  return Object.values(readJSON<Record<string, LocalStoryBook>>(LS_KEYS.storyBooks, {}))
+    .filter((r) => r.coupleId === coupleId)
+    .sort((a, b) => a.position - b.position || a.createdAt.localeCompare(b.createdAt))
+    .map(toStoryBook)
+}
+
+export async function getStoryBook(id: string): Promise<StoryBookDetail> {
+  const coupleId = requireCoupleId()
+  const books = readJSON<Record<string, LocalStoryBook>>(LS_KEYS.storyBooks, {})
+  const row = books[id]
+  if (!row || row.coupleId !== coupleId) throw new Error('NOT_FOUND')
+
+  const items = readJSON<LocalStoryItem[]>(LS_KEYS.storyItems, [])
+    .filter((i) => i.bookId === id)
+    .sort((a, b) => a.position - b.position)
+    .map((i) => ({ entryId: i.entryId, position: i.position }))
+
+  const diaries = readJSON<Record<string, LocalDiary>>(LS_KEYS.diaries, {})
+  const mediaRows = readJSON<LocalMediaRow[]>(LS_KEYS.diaryMedia, [])
+  const userId = requireUserId()
+  const entries: DiaryEntry[] = []
+  const missingEntryIds: string[] = []
+  for (const item of items) {
+    const d = diaries[item.entryId]
+    if (d && visibleTo(d, userId)) {
+      entries.push(toEntry(d, mediaRows.filter((r) => r.diaryEntryId === d.id).length))
+    } else {
+      missingEntryIds.push(item.entryId)
+    }
+  }
+  return { book: toStoryBook(row), items, entries, missingEntryIds }
+}
+
+export async function createStoryBook(coupleId: string, userId: string, input: StoryBookInput): Promise<string> {
+  if (requireCoupleId() !== coupleId) throw new Error('无权写入这个双人空间')
+  const books = readJSON<Record<string, LocalStoryBook>>(LS_KEYS.storyBooks, {})
+  const position = Object.values(books).filter((b) => b.coupleId === coupleId).length
+  const id = randomId()
+  const now = new Date().toISOString()
+  books[id] = {
+    id,
+    coupleId,
+    title: input.title.trim(),
+    intro: input.intro?.trim() || null,
+    coverMood: input.coverMood,
+    position,
+    createdBy: userId,
+    createdAt: now,
+    updatedAt: now,
+  }
+  writeJSON(LS_KEYS.storyBooks, books)
+  writeStoryItems(id, input.entryIds ?? [])
+  return id
+}
+
+function writeStoryItems(bookId: string, entryIds: string[]): void {
+  const items = readJSON<LocalStoryItem[]>(LS_KEYS.storyItems, []).filter((i) => i.bookId !== bookId)
+  const now = new Date().toISOString()
+  entryIds.forEach((entryId, index) => {
+    items.push({ id: randomId(), bookId, entryId, position: index, createdAt: now })
+  })
+  writeJSON(LS_KEYS.storyItems, items)
+}
+
+export async function updateStoryBook(id: string, input: StoryBookInput): Promise<void> {
+  const coupleId = requireCoupleId()
+  const books = readJSON<Record<string, LocalStoryBook>>(LS_KEYS.storyBooks, {})
+  const row = books[id]
+  if (!row || row.coupleId !== coupleId) throw new Error('NOT_FOUND')
+  row.title = input.title.trim()
+  row.intro = input.intro?.trim() || null
+  row.coverMood = input.coverMood
+  row.updatedAt = new Date().toISOString()
+  books[id] = row
+  writeJSON(LS_KEYS.storyBooks, books)
+  if (input.entryIds) writeStoryItems(id, input.entryIds)
+}
+
+export async function deleteStoryBook(id: string): Promise<void> {
+  const coupleId = requireCoupleId()
+  const books = readJSON<Record<string, LocalStoryBook>>(LS_KEYS.storyBooks, {})
+  const row = books[id]
+  if (!row || row.coupleId !== coupleId) throw new Error('NOT_FOUND')
+  delete books[id]
+  writeJSON(LS_KEYS.storyBooks, books)
+  writeJSON(
+    LS_KEYS.storyItems,
+    readJSON<LocalStoryItem[]>(LS_KEYS.storyItems, []).filter((i) => i.bookId !== id),
+  )
+}
+
+export async function reorderStoryBooks(ids: string[]): Promise<void> {
+  const coupleId = requireCoupleId()
+  const books = readJSON<Record<string, LocalStoryBook>>(LS_KEYS.storyBooks, {})
+  ids.forEach((id, index) => {
+    const row = books[id]
+    if (row && row.coupleId === coupleId) row.position = index
+  })
+  writeJSON(LS_KEYS.storyBooks, books)
 }

@@ -2,7 +2,7 @@
 
 > 迁移文件位于 `supabase/migrations/`，只做增量演进，不修改历史迁移。
 
-## 当前（阶段 1 · 迁移 00001 + 00002）
+## 当前（阶段 2 · 迁移 00001–00003）
 
 ### profiles — 用户档案
 
@@ -71,6 +71,16 @@ RLS：可见性跟随所属日记（作者全可见；伴侣仅共享已发布�
 | created_by | uuid FK | 创建者 |
 
 RLS：空间有效成员可读可写。
+
+### story_books — 自定义专题（00003）
+
+title ≤60、intro ≤500?、cover_mood（六心情色之一）、position（排序）、created_by。RLS：空间成员可读写；updated_at 触发器。
+月度/年度章节为**虚拟聚合**（查询侧按 happened_on 分组），不落库。
+
+### story_book_items — 专题条目（00003）
+
+story_book_id FK（级联删）、diary_entry_id FK（**on delete cascade：日记删除条目自动移除**）、position、added_by；`unique(story_book_id, diary_entry_id)`。
+RLS：所属专题的空间成员可读；插入额外校验日记与专题属同一空间。日记被改为私密时条目保留，读取侧按日记可见性解析为「占位」。
 
 ### RPC（00002，均为 SECURITY DEFINER，search_path=''，仅 authenticated 可执行）
 
