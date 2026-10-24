@@ -5,6 +5,8 @@
  * 只存哈希、24 小时有效、一次性、事务内校验人数上限。
  */
 import { getSupabase } from '@/lib/supabase'
+import { isSupabaseConfigured } from '@/lib/env'
+import * as local from './local/localBackend'
 
 export interface CoupleMember {
   userId: string
@@ -30,6 +32,7 @@ export interface CoupleSnapshot {
 }
 
 export async function getCoupleSnapshot(userId: string): Promise<CoupleSnapshot> {
+  if (!isSupabaseConfigured) return local.getCoupleSnapshot(userId)
   const sb = getSupabase()
   if (!sb) return { state: 'unpaired', info: null }
 
@@ -74,6 +77,7 @@ export async function getCoupleSnapshot(userId: string): Promise<CoupleSnapshot>
 
 /** 创建二人空间，返回明文邀请码（仅此一次展示） */
 export async function createCoupleSpace(displayName: string): Promise<string> {
+  if (!isSupabaseConfigured) return local.createCoupleSpace(displayName)
   const sb = getSupabase()
   if (!sb) throw new Error('数据库尚未连接')
   const { data, error } = await sb.rpc('create_couple_space', { p_display_name: displayName || null })
@@ -83,6 +87,7 @@ export async function createCoupleSpace(displayName: string): Promise<string> {
 
 /** 待配对时重新生成邀请码 */
 export async function regenerateInvitation(): Promise<{ code: string; expiresAt: string }> {
+  if (!isSupabaseConfigured) return local.regenerateInvitation()
   const sb = getSupabase()
   if (!sb) throw new Error('数据库尚未连接')
   const { data, error } = await sb.rpc('create_couple_invitation')
@@ -92,6 +97,7 @@ export async function regenerateInvitation(): Promise<{ code: string; expiresAt:
 
 /** 待用邀请的元数据（不含明文码）：用于显示剩余有效期 */
 export async function getPendingInvitation(): Promise<{ expiresAt: string } | null> {
+  if (!isSupabaseConfigured) return local.getPendingInvitation()
   const sb = getSupabase()
   if (!sb) return null
   const { data, error } = await sb.rpc('get_my_couple_invitation')
@@ -101,6 +107,7 @@ export async function getPendingInvitation(): Promise<{ expiresAt: string } | nu
 
 /** 凭邀请码加入，返回 couple_id */
 export async function joinCouple(code: string): Promise<string> {
+  if (!isSupabaseConfigured) return local.joinCouple(code)
   const sb = getSupabase()
   if (!sb) throw new Error('数据库尚未连接')
   const { data, error } = await sb.rpc('join_couple_with_code', { p_code: code.trim().toUpperCase() })

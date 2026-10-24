@@ -18,7 +18,7 @@ type Mode = 'login' | 'register' | 'forgot'
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { session } = useAuth()
+  const { userId } = useAuth()
 
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
@@ -29,12 +29,16 @@ export function LoginPage() {
   const [notice, setNotice] = useState('')
 
   const from = (location.state as { from?: string } | null)?.from ?? '/forest'
-  const configured = isSupabaseConfigured
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setNotice('')
+    // 本地模式不支持邮件找回，直接给出诚实提示
+    if (mode === 'forgot' && !isSupabaseConfigured) {
+      setNotice(t('auth.forgotLocalNotice'))
+      return
+    }
     setBusy(true)
     try {
       if (mode === 'login') {
@@ -75,7 +79,7 @@ export function LoginPage() {
               <p className="text-xs text-bark-soft">{t('login.desc')}</p>
             </div>
           </div>
-          {session ? (
+          {userId ? (
             <button
               type="button"
               className="text-xs text-bark-soft underline underline-offset-2"
@@ -109,12 +113,6 @@ export function LoginPage() {
           </div>
         ) : null}
 
-        {!configured ? (
-          <p className="mb-4 rounded-2xl border border-leaf-gold/40 bg-leaf-gold/10 p-3 text-xs leading-5 text-bark">
-            {t('auth.needConfig')}
-          </p>
-        ) : null}
-
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
             <label className={labelCls} htmlFor="auth-email">
@@ -129,7 +127,7 @@ export function LoginPage() {
               placeholder={t('auth.emailPlaceholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={!configured || busy}
+              disabled={busy}
             />
           </div>
 
@@ -145,7 +143,7 @@ export function LoginPage() {
                 value={nickname}
                 maxLength={30}
                 onChange={(e) => setNickname(e.target.value)}
-                disabled={!configured || busy}
+                disabled={busy}
               />
             </div>
           ) : null}
@@ -180,7 +178,7 @@ export function LoginPage() {
                 placeholder={t('auth.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={!configured || busy}
+                disabled={busy}
               />
             </div>
           ) : null}
@@ -196,7 +194,7 @@ export function LoginPage() {
             </p>
           ) : null}
 
-          <Button type="submit" className="w-full" disabled={!configured || busy}>
+          <Button type="submit" className="w-full" disabled={busy}>
             {busy
               ? t('common.saving')
               : mode === 'login'

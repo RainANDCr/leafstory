@@ -2,6 +2,8 @@
  * 纪念日数据访问。倒计时与「下一次发生日」的展示逻辑在 lib/dates（本地日历日语义）。
  */
 import { getSupabase } from '@/lib/supabase'
+import { isSupabaseConfigured } from '@/lib/env'
+import * as local from './local/localBackend'
 
 export type AnniversaryKind = 'met' | 'together' | 'birthday' | 'first_date' | 'custom'
 
@@ -55,6 +57,7 @@ function toAnniversary(row: Row): Anniversary {
 }
 
 export async function listAnniversaries(coupleId: string): Promise<Anniversary[]> {
+  if (!isSupabaseConfigured) return local.listAnniversaries(coupleId)
   const sb = requireSupabase()
   const { data, error } = await sb
     .from('anniversaries')
@@ -74,6 +77,7 @@ export interface AnniversaryInput {
 }
 
 export async function createAnniversary(coupleId: string, userId: string, input: AnniversaryInput): Promise<void> {
+  if (!isSupabaseConfigured) return local.createAnniversary(coupleId, userId, input)
   const sb = requireSupabase()
   const { error } = await sb.from('anniversaries').insert({
     couple_id: coupleId,
@@ -88,6 +92,7 @@ export async function createAnniversary(coupleId: string, userId: string, input:
 }
 
 export async function updateAnniversary(id: string, input: AnniversaryInput): Promise<void> {
+  if (!isSupabaseConfigured) return local.updateAnniversary(id, input)
   const sb = requireSupabase()
   const { error } = await sb
     .from('anniversaries')
@@ -103,6 +108,7 @@ export async function updateAnniversary(id: string, input: AnniversaryInput): Pr
 }
 
 export async function deleteAnniversary(id: string): Promise<void> {
+  if (!isSupabaseConfigured) return local.deleteAnniversary(id)
   const sb = requireSupabase()
   const { error } = await sb.from('anniversaries').delete().eq('id', id)
   if (error) throw error

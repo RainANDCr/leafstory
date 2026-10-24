@@ -1,7 +1,10 @@
 /**
  * 个人档案：读取与更新（昵称、时区）。
+ * 未配置 Supabase 时走本地模式。
  */
 import { getSupabase } from '@/lib/supabase'
+import { isSupabaseConfigured } from '@/lib/env'
+import * as local from './local/localBackend'
 
 export interface Profile {
   id: string
@@ -12,6 +15,7 @@ export interface Profile {
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
+  if (!isSupabaseConfigured) return local.getProfile(userId)
   const sb = getSupabase()
   if (!sb) return null
   const { data, error } = await sb
@@ -31,6 +35,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 }
 
 export async function updateProfile(userId: string, patch: { nickname?: string; timezone?: string }): Promise<void> {
+  if (!isSupabaseConfigured) return local.updateProfile(userId, patch)
   const sb = getSupabase()
   if (!sb) throw new Error('数据库尚未连接')
   const { error } = await sb.from('profiles').update(patch).eq('id', userId)

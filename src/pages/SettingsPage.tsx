@@ -138,7 +138,7 @@ function AccountCard({ profile, email }: { profile: Profile; email: string }) {
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { session, userId } = useAuth()
+  const { userId, email } = useAuth()
   const coupleQuery = useCoupleSnapshot()
 
   const profileQuery = useQuery({
@@ -155,14 +155,21 @@ export function SettingsPage() {
     <>
       <PageHeader title={t('settings.title')} description={t('settings.intro')} />
 
-      {/* 服务连接 */}
+      {/* 数据与连接：如实区分云端与本地模式 */}
       <Card className="mb-4">
         <h2 className="mb-3 text-sm font-medium text-bark-soft">{t('settings.connectionTitle')}</h2>
         <div className="flex items-center gap-2.5">
-          <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${isSupabaseConfigured ? 'bg-forest' : 'bg-maple'}`} />
-          <p className="text-sm text-bark">{isSupabaseConfigured ? t('settings.connected') : t('settings.notConnected')}</p>
+          <span
+            aria-hidden="true"
+            className={`h-2.5 w-2.5 rounded-full ${isSupabaseConfigured ? 'bg-forest' : 'bg-leaf-gold'}`}
+          />
+          <p className="text-sm text-bark">
+            {isSupabaseConfigured ? t('settings.connected') : t('settings.connectionLocal')}
+          </p>
         </div>
-        {!isSupabaseConfigured ? <p className="mt-2 text-xs leading-5 text-bark-soft">{t('settings.notConnectedHint')}</p> : null}
+        <p className="mt-2 text-xs leading-5 text-bark-soft">
+          {isSupabaseConfigured ? '' : t('settings.localModeHint')}
+        </p>
       </Card>
 
       {/* 账户 */}
@@ -172,7 +179,7 @@ export function SettingsPage() {
           profileQuery.isLoading ? (
             <p className="text-sm text-bark-soft">{t('common.loading')}</p>
           ) : profileQuery.data ? (
-            <AccountCard key={profileQuery.data.id} profile={profileQuery.data} email={session?.user?.email ?? ''} />
+            <AccountCard key={profileQuery.data.id} profile={profileQuery.data} email={email ?? ''} />
           ) : (
             <p className="text-sm text-bark-soft">{t('errors.unknown')}</p>
           )

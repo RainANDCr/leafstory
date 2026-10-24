@@ -3,8 +3,10 @@
  * 可见性完全由数据库 RLS 决定，本层不做也不信任前端权限判断。
  */
 import { getSupabase } from '@/lib/supabase'
+import { isSupabaseConfigured } from '@/lib/env'
 import { MAX_MEDIA_PER_ENTRY, resizeImage } from '@/lib/image'
 import type { DiaryEntry, DiaryFilter, DiaryInput, DiaryMedia } from '@/features/diary/types'
+import * as local from './local/localBackend'
 
 const PAGE_SIZE = 10
 const BUCKET = 'diary-media'
@@ -56,6 +58,7 @@ export interface DiaryPage {
 }
 
 export async function listDiaries(page: number, filter: DiaryFilter = {}): Promise<DiaryPage> {
+  if (!isSupabaseConfigured) return local.listDiaries(page, filter)
   const sb = requireSupabase()
   let query = sb
     .from('diary_entries')
@@ -80,6 +83,7 @@ export async function listDiaries(page: number, filter: DiaryFilter = {}): Promi
 
 /** 首页回忆树：双方可见的已发布日记（叶片数据源），限制条数 */
 export async function listSharedDiariesForTree(limit = 200): Promise<DiaryEntry[]> {
+  if (!isSupabaseConfigured) return local.listSharedDiariesForTree(limit)
   const sb = requireSupabase()
   const { data, error } = await sb
     .from('diary_entries')
@@ -117,6 +121,7 @@ export interface DiaryDetail {
 }
 
 export async function getDiaryDetail(id: string): Promise<DiaryDetail> {
+  if (!isSupabaseConfigured) return local.getDiaryDetail(id)
   const sb = requireSupabase()
   const { data, error } = await sb
     .from('diary_entries')
@@ -133,6 +138,7 @@ export async function getDiaryDetail(id: string): Promise<DiaryDetail> {
 }
 
 export async function createDiary(input: DiaryInput): Promise<string> {
+  if (!isSupabaseConfigured) return local.createDiary(input)
   const sb = requireSupabase()
   const { data, error } = await sb
     .from('diary_entries')
@@ -157,12 +163,14 @@ export async function updateDiary(
   id: string,
   patch: Partial<Pick<DiaryInput, 'title' | 'content' | 'happenedOn' | 'mood' | 'category' | 'visibility' | 'status'>>,
 ): Promise<void> {
+  if (!isSupabaseConfigured) return local.updateDiary(id, patch)
   const sb = requireSupabase()
   const { error } = await sb.from('diary_entries').update(patch).eq('id', id)
   if (error) throw error
 }
 
 export async function deleteDiary(coupleId: string, entryId: string): Promise<void> {
+  if (!isSupabaseConfigured) return local.deleteDiary(coupleId, entryId)
   const sb = requireSupabase()
   // 先清理 Storage 里该日记的文件（列出前缀下的对象），再删行（media 行级联删除）
   const folder = `couple/${coupleId}/diary/${entryId}`
@@ -188,6 +196,7 @@ export async function uploadDiaryMedia(
   files: File[],
   startPosition: number,
 ): Promise<string[]> {
+  if (!isSupabaseConfigured) return local.uploadDiaryMedia(userId, coupleId, entryId, files, startPosition)
   const sb = requireSupabase()
   const failed: string[] = []
   let position = startPosition
@@ -220,6 +229,7 @@ export async function uploadDiaryMedia(
 
 /** 删除已上传照片：Storage 对象 + 元数据行 */
 export async function removeDiaryMedia(media: DiaryMedia): Promise<void> {
+  if (!isSupabaseConfigured) return local.removeDiaryMedia(media)
   const sb = requireSupabase()
   const { error: rowErr } = await sb.from('diary_media').delete().eq('id', media.id)
   if (rowErr) throw rowErr
@@ -227,6 +237,7 @@ export async function removeDiaryMedia(media: DiaryMedia): Promise<void> {
 }
 
 export async function createMediaSignedUrl(path: string, expiresInSec = 3600): Promise<string> {
+  if (!isSupabaseConfigured) return local.createMediaSignedUrl(path)
   const sb = requireSupabase()
   const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, expiresInSec)
   if (error || !data) throw error ?? new Error('签名 URL 创建失败')

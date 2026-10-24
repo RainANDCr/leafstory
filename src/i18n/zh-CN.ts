@@ -44,10 +44,10 @@ export const zhCN = {
     loginRequired: '请先登录',
   },
   setupBanner: {
-    title: '还没有连接数据库',
-    body: '当前展示的是界面骨架，不会有任何数据被保存。复制 .env.example 为 .env 并填写 Supabase 配置，重启应用后即可连接。',
+    title: '本地模式已启用',
+    body: '不用配置任何服务，现在就能用：数据只保存在这台设备的浏览器里（照片在浏览器本地数据库），不会上传到任何服务器。清除浏览器站点数据会一并删除这些记录；想转为云端双人同步时，按 README 配置 Supabase 并重启即可。',
     dismiss: '知道了',
-    goToSettings: '查看配置状态',
+    goToSettings: '查看数据状态',
   },
   auth: {
     loginTitle: '登录',
@@ -73,6 +73,7 @@ export const zhCN = {
     verifyEmail: '注册成功！如果项目开启了邮箱验证，请先到邮箱点击确认链接，再回来登录。',
     signedOut: '已退出登录。',
     needConfig: '数据库尚未连接，无法登录或注册。请先按 README 配置 Supabase。',
+    forgotLocalNotice: '本地模式下不支持邮件找回。如忘记密码，可以注册一个新账号；或清除浏览器站点数据后重新开始（会删除本设备的全部本地数据）。',
     notLoggedIn: '未登录',
     signOut: '退出登录',
     errors: {
@@ -264,10 +265,12 @@ export const zhCN = {
   settings: {
     title: '设置',
     intro: '账户、配对、偏好、隐私与 AI 的入口都在这里。',
-    connectionTitle: '服务连接',
-    connected: '已连接 Supabase',
+    connectionTitle: '数据与连接',
+    connected: '已连接 Supabase（云端同步）',
     notConnected: '未连接 Supabase',
     notConnectedHint: '在项目根目录复制 .env.example 为 .env，填入 VITE_SUPABASE_URL 与 VITE_SUPABASE_ANON_KEY 后重启。',
+    connectionLocal: '本地模式',
+    localModeHint: '所有数据只保存在这台设备的浏览器里，不上传服务器；清除浏览器站点数据会一并删除。配置 .env 并重启后可切换为云端双人同步。',
     accountTitle: '账户',
     accountEmail: '邮箱',
     accountNickname: '昵称',
