@@ -71,17 +71,6 @@ npm run dev          # 启动开发服务器（默认 http://localhost:5173）
 4. 「日记」页写日记：选心情（决定叶子颜色）、可加照片、默认双方可见（也可仅自己可见/存草稿）。
 5. 「森林」首页看回忆之树长出叶子；「足迹」页添加纪念日看倒计时。
 
-## 常用命令
-
-| 命令 | 说明 |
-|---|---|
-| `npm run dev` | 开发服务器 |
-| `npm run build` | 类型检查 + 生产构建（输出 `dist/`） |
-| `npm run preview` | 本地预览生产构建 |
-| `npm run lint` | ESLint 检查 |
-| `npm run typecheck` | TypeScript 严格类型检查 |
-| `npm run test` | Vitest 单元测试 |
-
 ## 目录速览
 
 ```
