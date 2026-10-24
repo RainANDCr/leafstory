@@ -17,6 +17,8 @@ import type { CoupleInfo, CoupleSnapshot } from '../coupleService'
 import type { Anniversary, AnniversaryInput, AnniversaryKind } from '../anniversaryService'
 import type { DiaryDetail, DiaryPage } from '../diaryService'
 import type { StoryBook, StoryBookDetail, StoryBookInput } from '../storyService'
+import type { Wish, WishInput, WishStatus } from '../wishService'
+import type { LetterContent, LetterEnvelope, LetterInput } from '../letterService'
 import type { DiaryEntry, DiaryFilter, DiaryInput, DiaryMedia } from '@/features/diary/types'
 
 // ------------------------------------------------------------ 类型
@@ -711,8 +713,16 @@ function requireCoupleId(): string {
   return mine.coupleId
 }
 
+/** 调用者所属空间；未配对返回 null（列表类查询应返回空而不是抛错） */
+function myCoupleIdOrNull(): string | null {
+  const session = currentSession()
+  if (!session) return null
+  const mine = myMembership(session.userId)
+  return mine?.coupleId ?? null
+}
+
 export async function listStoryBooks(coupleId: string): Promise<StoryBook[]> {
-  if (requireCoupleId() !== coupleId) return []
+  if (myCoupleIdOrNull() !== coupleId) return []
   return Object.values(readJSON<Record<string, LocalStoryBook>>(LS_KEYS.storyBooks, {}))
     .filter((r) => r.coupleId === coupleId)
     .sort((a, b) => a.position - b.position || a.createdAt.localeCompare(b.createdAt))
@@ -812,4 +822,282 @@ export async function reorderStoryBooks(ids: string[]): Promise<void> {
     if (row && row.coupleId === coupleId) row.position = index
   })
   writeJSON(LS_KEYS.storyBooks, books)
+}
+
+// ------------------------------------------------------------ 心愿瓶
+
+interface LocalWish {
+  id: string
+  coupleId: string
+  title: string
+  description: string | null
+  createdBy: string
+  dueDate: string | null
+  priority: 'low' | 'normal' | 'high'
+  status: WishStatus
+  placeNote: string | null
+  completedAt: string | null
+  completedBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface LocalWishEvent {
+  id: string
+  wishId: string
+  actorId: string
+  action: 'created' | 'status_changed' | 'edited'
+  fromStatus: string | null
+  toStatus: string | null
+  createdAt: string
+}
+
+interface LocalWishLink {
+  wishId: string
+  diaryEntryId: string
+  linkedBy: string
+  createdAt: string
+}
+
+function toWish(row: LocalWish, links: LocalWishLink[]): Wish {
+  const link = links.find((l) => l.wishId === row.id)
+  return {
+    id: row.id,
+    coupleId: row.coupleId,
+    title: row.title,
+    description: row.description,
+    createdBy: row.createdBy,
+    dueDate: row.dueDate,
+    priority: row.priority,
+    status: row.status,
+    placeNote: row.placeNote,
+    completedAt: row.completedAt,
+    completedBy: row.completedBy,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    linkedDiaryId: link?.diaryEntryId ?? null,
+  }
+}
+
+export async function listWishes(coupleId: string): Promise<Wish[]> {
+  if (myCoupleIdOrNull() !== coupleId) return []
+  const links = readJSON<LocalWishLink[]>(LS_KEYS.wishLinks, [])
+  return Object.values(readJSON<Record<string, LocalWish>>(LS_KEYS.wishes, {}))
+    .filter((r) => r.coupleId === coupleId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((r) => toWish(r, links))
+}
+
+function recordWishEvent(wishId: string, actorId: string, action: LocalWishEvent['action'], from: string | null, to: string | null): void {
+  const events = readJSON<LocalWishEvent[]>(LS_KEYS.wishEvents, [])
+  events.push({
+    id: randomId(),
+    wishId,
+    actorId,
+    action,
+    fromStatus: from,
+    toStatus: to,
+    createdAt: new Date().toISOString(),
+  })
+  writeJSON(LS_KEYS.wishEvents, events)
+}
+
+export async function createWish(coupleId: string, userId: string, input: WishInput): Promise<void> {
+  if (requireCoupleId() !== coupleId) throw new Error('无权写入这个双人空间')
+  const wishes = readJSON<Record<string, LocalWish>>(LS_KEYS.wishes, {})
+  const id = randomId()
+  const now = new Date().toISOString()
+  wishes[id] = {
+    id,
+    coupleId,
+    title: input.title.trim(),
+    description: input.description?.trim() || null,
+    createdBy: userId,
+    dueDate: input.dueDate || null,
+    priority: input.priority,
+    status: 'wish',
+    placeNote: input.placeNote?.trim() || null,
+    completedAt: null,
+    completedBy: null,
+    createdAt: now,
+    updatedAt: now,
+  }
+  writeJSON(LS_KEYS.wishes, wishes)
+  recordWishEvent(id, userId, 'created', null, 'wish')
+}
+
+function requireWish(id: string): { wishes: Record<string, LocalWish>; row: LocalWish } {
+  const coupleId = requireCoupleId()
+  const wishes = readJSON<Record<string, LocalWish>>(LS_KEYS.wishes, {})
+  const row = wishes[id]
+  if (!row || row.coupleId !== coupleId) throw new Error('NOT_FOUND')
+  return { wishes, row }
+}
+
+export async function updateWish(id: string, input: WishInput): Promise<void> {
+  const { wishes, row } = requireWish(id)
+  const userId = requireUserId()
+  row.title = input.title.trim()
+  row.description = input.description?.trim() || null
+  row.dueDate = input.dueDate || null
+  row.priority = input.priority
+  row.placeNote = input.placeNote?.trim() || null
+  row.updatedAt = new Date().toISOString()
+  wishes[id] = row
+  writeJSON(LS_KEYS.wishes, wishes)
+  recordWishEvent(id, userId, 'edited', null, null)
+}
+
+export async function setWishStatus(id: string, to: WishStatus): Promise<void> {
+  const { wishes, row } = requireWish(id)
+  const userId = requireUserId()
+  const from = row.status
+  row.status = to
+  if (to === 'done') {
+    row.completedAt = new Date().toISOString()
+    row.completedBy = userId
+  } else {
+    row.completedAt = null
+    row.completedBy = null
+  }
+  row.updatedAt = new Date().toISOString()
+  wishes[id] = row
+  writeJSON(LS_KEYS.wishes, wishes)
+  recordWishEvent(id, userId, 'status_changed', from, to)
+}
+
+export async function linkWishDiary(wishId: string, diaryEntryId: string | null, userId: string): Promise<void> {
+  const { row } = requireWish(wishId)
+  const links = readJSON<LocalWishLink[]>(LS_KEYS.wishLinks, []).filter((l) => l.wishId !== wishId)
+  if (diaryEntryId) {
+    // 只能关联自己空间里、且当前用户可见的日记
+    const diaries = readJSON<Record<string, LocalDiary>>(LS_KEYS.diaries, {})
+    const entry = diaries[diaryEntryId]
+    if (!entry || entry.coupleId !== row.coupleId) throw new Error('NOT_FOUND')
+    const currentUserId = requireUserId()
+    if (!visibleTo(entry, currentUserId)) throw new Error('NOT_FOUND')
+    links.push({ wishId, diaryEntryId, linkedBy: userId, createdAt: new Date().toISOString() })
+  }
+  writeJSON(LS_KEYS.wishLinks, links)
+}
+
+export async function deleteWish(id: string): Promise<void> {
+  const { wishes } = requireWish(id)
+  delete wishes[id]
+  writeJSON(LS_KEYS.wishes, wishes)
+  writeJSON(
+    LS_KEYS.wishLinks,
+    readJSON<LocalWishLink[]>(LS_KEYS.wishLinks, []).filter((l) => l.wishId !== id),
+  )
+  // 关联的日记保留不动
+}
+
+// ------------------------------------------------------------ 时光邮局
+
+interface LocalLetter {
+  id: string
+  coupleId: string
+  authorId: string
+  recipient: 'partner' | 'both'
+  unlockAt: string // UTC ISO
+  status: 'sealed' | 'revoked'
+  title: string
+  body: string
+  createdAt: string
+  updatedAt: string
+}
+
+function toEnvelope(row: LocalLetter): LetterEnvelope {
+  // 封套刻意不携带标题/正文
+  return {
+    id: row.id,
+    coupleId: row.coupleId,
+    authorId: row.authorId,
+    recipient: row.recipient,
+    unlockAt: row.unlockAt,
+    status: row.status,
+    createdAt: row.createdAt,
+  }
+}
+
+export async function listLetters(coupleId: string): Promise<LetterEnvelope[]> {
+  if (myCoupleIdOrNull() !== coupleId) return []
+  return Object.values(readJSON<Record<string, LocalLetter>>(LS_KEYS.letters, {}))
+    .filter((r) => r.coupleId === coupleId)
+    .sort((a, b) => a.unlockAt.localeCompare(b.unlockAt))
+    .map(toEnvelope)
+}
+
+export async function sealLetter(coupleId: string, userId: string, input: LetterInput): Promise<void> {
+  if (requireCoupleId() !== coupleId) throw new Error('无权写入这个双人空间')
+  const now = Date.now()
+  if (new Date(input.unlockAt).getTime() <= now) throw new Error('开启时间要设在未来')
+  const letters = readJSON<Record<string, LocalLetter>>(LS_KEYS.letters, {})
+  const id = randomId()
+  const nowISO = new Date().toISOString()
+  letters[id] = {
+    id,
+    coupleId,
+    authorId: userId,
+    recipient: input.recipient,
+    unlockAt: input.unlockAt,
+    status: 'sealed',
+    title: input.title.trim(),
+    body: input.body,
+    createdAt: nowISO,
+    updatedAt: nowISO,
+  }
+  writeJSON(LS_KEYS.letters, letters)
+}
+
+/**
+ * 读信（本地模式在服务层执行与云端 RPC 相同的校验）。
+ * 注意：本地模式的数据本就在用户自己的设备上，规则保证的是
+ * 「正常使用路径下的保密」，不是对抗本机用户的安全边界。
+ */
+export async function readLetter(letterId: string): Promise<LetterContent> {
+  const coupleId = requireCoupleId()
+  const userId = requireUserId()
+  const row = readJSON<Record<string, LocalLetter>>(LS_KEYS.letters, {})[letterId]
+  if (!row || row.coupleId !== coupleId) throw new Error('信件不存在')
+
+  if (row.authorId !== userId) {
+    if (row.status !== 'sealed') throw new Error('这封信已被寄件人撤回')
+    if (Date.now() < new Date(row.unlockAt).getTime()) throw new Error('这封信还没有到开启时间')
+  }
+
+  return {
+    id: row.id,
+    authorId: row.authorId,
+    recipient: row.recipient,
+    unlockAt: row.unlockAt,
+    status: row.status,
+    title: row.title,
+    body: row.body,
+  }
+}
+
+export async function revokeLetter(letterId: string): Promise<void> {
+  const coupleId = requireCoupleId()
+  const userId = requireUserId()
+  const letters = readJSON<Record<string, LocalLetter>>(LS_KEYS.letters, {})
+  const row = letters[letterId]
+  if (!row || row.coupleId !== coupleId) throw new Error('信件不存在')
+  if (row.authorId !== userId) throw new Error('只有寄件人可以撤回')
+  if (row.status !== 'sealed') throw new Error('这封信已经撤回过了')
+  if (Date.now() >= new Date(row.unlockAt).getTime()) throw new Error('信件已经到达开启时间，无法再撤回')
+  row.status = 'revoked'
+  row.updatedAt = new Date().toISOString()
+  letters[letterId] = row
+  writeJSON(LS_KEYS.letters, letters)
+}
+
+export async function deleteLetter(letterId: string): Promise<void> {
+  const coupleId = requireCoupleId()
+  const userId = requireUserId()
+  const letters = readJSON<Record<string, LocalLetter>>(LS_KEYS.letters, {})
+  const row = letters[letterId]
+  if (!row || row.coupleId !== coupleId || row.authorId !== userId) throw new Error('NOT_FOUND')
+  delete letters[letterId]
+  writeJSON(LS_KEYS.letters, letters)
 }

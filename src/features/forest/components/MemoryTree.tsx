@@ -37,11 +37,13 @@ const LEAF_SPOTS: ReadonlyArray<readonly [number, number]> = [
   [115, 165], [160, 170], [200, 170], [145, 135], [230, 85], [190, 90], [120, 125], [260, 110],
 ]
 
-/** 纪念日金叶的固定点位（避开日记叶片密集区，靠树冠外缘上方） */
+/** 纪念日/已完成心愿金叶的固定点位（避开日记叶片密集区，靠树冠外缘上方） */
 const GOLD_SPOTS: ReadonlyArray<readonly [number, number, number]> = [
   [98, 108, -24],
   [268, 92, 20],
   [182, 34, 2],
+  [128, 58, -16],
+  [240, 46, 14],
 ]
 
 export interface TreeLeaf {
@@ -55,8 +57,10 @@ export interface TreeLeaf {
 export interface TreeGoldLeaf {
   id: string
   title: string
-  /** 倒计时文案，如「还有 30 天」 */
+  /** 倒计时/描述文案，如「还有 30 天」「完成于 10月1日」 */
   text: string
+  /** 点击「去看看」跳转的目标（缺省为足迹页） */
+  linkTo?: string
 }
 
 interface MemoryTreeProps {
@@ -297,9 +301,9 @@ export function MemoryTree({ season, className, label = '回忆之树', leaves, 
                 <button
                   type="button"
                   className="min-h-9 rounded-xl bg-bark px-3 text-xs font-medium text-paper transition-colors hover:bg-bark-deep"
-                  onClick={() => navigate('/footprints')}
+                  onClick={() => navigate(selection.leaf.linkTo ?? '/footprints')}
                 >
-                  {zhCN.story.goFootprints}
+                  {zhCN.forest.treeGoSee}
                 </button>
                 <button type="button" aria-label={zhCN.common.cancel} className="min-h-9 px-2 text-xs text-bark-soft" onClick={() => setSelection(null)}>
                   ✕

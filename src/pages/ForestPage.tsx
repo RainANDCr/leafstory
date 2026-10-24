@@ -23,6 +23,7 @@ import { countdownText, isGoldKind, kindLabel, nextAnniversary, withCountdown } 
 import { useCoupleSnapshot } from '@/features/couple/useCoupleSnapshot'
 import { listSharedDiariesForTree } from '@/services/diaryService'
 import { listAnniversaries } from '@/services/anniversaryService'
+import { listWishes } from '@/services/wishService'
 import { getErrorMessage } from '@/lib/errors'
 import { t, zhCN } from '@/i18n'
 
@@ -60,6 +61,12 @@ export function ForestPage() {
     enabled: Boolean(coupleId),
   })
 
+  const wishesQuery = useQuery({
+    queryKey: ['wishes', coupleId],
+    queryFn: () => listWishes(coupleId!),
+    enabled: Boolean(coupleId),
+  })
+
   if (coupleQuery.isLoading) return <LoadingState />
   if (coupleQuery.isError) {
     return <ErrorState message={getErrorMessage(coupleQuery.error)} onRetry={() => void qc.invalidateQueries({ queryKey: ['couple'] })} />
@@ -87,10 +94,19 @@ export function ForestPage() {
 
   const anniversaries = withCountdown(anniversariesQuery.data ?? [])
   const next = nextAnniversary(anniversaries)
-  const goldLeaves = anniversaries
+  const anniversaryGold = anniversaries
     .filter((a) => isGoldKind(a.kind))
     .slice(0, 3)
     .map((a) => ({ id: a.id, title: a.title, text: `${kindLabel(a.kind)} · ${countdownText(a)}` }))
+  // 已完成的心愿也化为金叶（最多 2 片）；绑定了日记的直接跳过去
+  const doneWishes = (wishesQuery.data ?? []).filter((w) => w.status === 'done').slice(0, 2)
+  const wishGold = doneWishes.map((w) => ({
+    id: w.id,
+    title: w.title,
+    text: w.completedAt ? `心愿达成 · ${new Date(w.completedAt).getMonth() + 1}月${new Date(w.completedAt).getDate()}日` : '心愿达成',
+    linkTo: w.linkedDiaryId ? `/diary/${w.linkedDiaryId}` : '/interact',
+  }))
+  const goldLeaves = [...anniversaryGold, ...wishGold].slice(0, 5)
 
   return (
     <>

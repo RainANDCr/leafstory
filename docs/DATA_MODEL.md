@@ -2,7 +2,7 @@
 
 > 迁移文件位于 `supabase/migrations/`，只做增量演进，不修改历史迁移。
 
-## 当前（阶段 2 · 迁移 00001–00003）
+## 当前（阶段 3 · 迁移 00001–00004）
 
 ### profiles — 用户档案
 
@@ -81,6 +81,19 @@ title ≤60、intro ≤500?、cover_mood（六心情色之一）、position（�
 
 story_book_id FK（级联删）、diary_entry_id FK（**on delete cascade：日记删除条目自动移除**）、position、added_by；`unique(story_book_id, diary_entry_id)`。
 RLS：所属专题的空间成员可读；插入额外校验日记与专题属同一空间。日记被改为私密时条目保留，读取侧按日记可见性解析为「占位」。
+
+### wishes / wish_events / wish_diary_links — 心愿瓶（00004）
+
+wishes：title ≤80、description ≤1000?、created_by、due_date（DATE?）、priority（low/normal/high）、status（wish 想做 / planned 计划中 / done 已完成 / archived 归档）、place_note?、completed_at/by。RLS：空间成员共享读写。
+wish_events：wish_id FK、actor_id、action（created/status_changed/edited）、from/to_status——记录每次协同变更的操作者与时间。
+wish_diary_links：(wish_id, diary_entry_id) 联合主键，两侧均 on delete cascade——**删除心愿或日记都只删关联行，不连坐**；插入校验日记属同空间且对当前用户可见。
+
+### letters / letter_contents — 时光邮局（00004）
+
+letters（**封套**）：couple_id、author_id、recipient（partner=写给对方 / both=写给我们俩）、unlock_at（timestamptz，UTC）、status（sealed/revoked）。**不含标题与正文**；封套 RLS 成员可读（收件人解锁前只知「有一封信」）。
+letter_contents（**正文**）：letter_id PK FK、title ≤80、body ≤10000。**无任何 SELECT/UPDATE/DELETE 策略**——唯一读入口是 `read_letter` RPC（成员身份 + 服务端时间 ≥ unlock_at + 收件规则 + 状态），唯一写入口是作者插入（封存时一次写入）。
+RPC：`read_letter` / `revoke_letter`（作者 + 到期前 + FOR UPDATE 锁），均 SECURITY DEFINER、search_path=''、仅 authenticated。
+时间语义：unlock_at 存 UTC，展示按用户时区（`src/features/letters/time.ts` 统一换算）。
 
 ### RPC（00002，均为 SECURITY DEFINER，search_path=''，仅 authenticated 可执行）
 

@@ -42,7 +42,7 @@ describe('MemoryTree 交互', () => {
     const popover = screen.getByRole('dialog')
     expect(popover).toHaveTextContent('还有 30 天')
 
-    fireEvent.click(screen.getByRole('button', { name: '去足迹看看' }))
+    fireEvent.click(screen.getByRole('button', { name: '去看看' }))
     expect(screen.getByText('足迹页')).toBeInTheDocument()
   })
 
