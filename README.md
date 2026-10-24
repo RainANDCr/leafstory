@@ -4,6 +4,8 @@
 > 两个人的私密恋爱日记：每篇日记化作一片叶子，回忆沉淀成故事书，
 > 一只小猴子守护着你们的记忆。
 
+**[🌐 在线使用](https://rainandcr.github.io/leafstory/)** · **[💻 下载 Windows 版](https://github.com/RainANDCr/leafstory/releases/latest)**（安装包 / 免安装便携版）
+
 **当前进度：阶段 0–7 全部完成（Windows EXE 可选阶段 8 未做）。**
 路线：0 骨架 ✅ → 1 账户/日记/纪念日 ✅ → 2 树+故事书 ✅ → 3 心愿瓶+时光邮局 ✅ → 4 地图+问答 ✅ → 5 AI（BYOK）✅ → 6 年度金叶+导出+数据管理 ✅ → 7 测试+部署+Android ✅ → 8（可选）Windows。
 
