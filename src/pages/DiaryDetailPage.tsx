@@ -11,6 +11,7 @@ import { LoadingState } from '@/components/feedback/LoadingState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { Lightbox } from '@/components/ui/Lightbox'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { AiPolishDialog } from '@/features/ai/AiPolishDialog'
 import { getMood } from '@/features/diary/types'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useCoupleSnapshot } from '@/features/couple/useCoupleSnapshot'
@@ -27,6 +28,7 @@ export function DiaryDetailPage() {
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
@@ -66,19 +68,24 @@ export function DiaryDetailPage() {
         title={entry.title || '无题'}
         description={`${zhCN.diary.authorBy(authorName)} · ${formatDateHuman(entry.happenedOn)}`}
         actions={
-          isMine ? (
-            <>
-              <Link
-                to={`/diary/${entry.id}/edit`}
-                className="inline-flex min-h-11 items-center rounded-2xl border border-paper-edge bg-card px-4 text-sm text-bark transition-colors hover:bg-paper-deep"
-              >
-                {t('common.edit')}
-              </Link>
-              <Button className="bg-maple hover:bg-maple/85" onClick={() => setConfirmOpen(true)}>
-                {t('common.delete')}
-              </Button>
-            </>
-          ) : undefined
+          <>
+            <Button variant="secondary" onClick={() => setAiOpen(true)}>
+              ✨ {t('ai.entryPolish')}
+            </Button>
+            {isMine ? (
+              <>
+                <Link
+                  to={`/diary/${entry.id}/edit`}
+                  className="inline-flex min-h-11 items-center rounded-2xl border border-paper-edge bg-card px-4 text-sm text-bark transition-colors hover:bg-paper-deep"
+                >
+                  {t('common.edit')}
+                </Link>
+                <Button className="bg-maple hover:bg-maple/85" onClick={() => setConfirmOpen(true)}>
+                  {t('common.delete')}
+                </Button>
+              </>
+            ) : null}
+          </>
         }
       />
 
@@ -144,6 +151,15 @@ export function DiaryDetailPage() {
         busy={deleting}
         onConfirm={() => void onDelete()}
         onCancel={() => setConfirmOpen(false)}
+      />
+
+      {/* AI 润色：素材就是这篇日记（你能看到它本身已由 RLS/服务层保证） */}
+      <AiPolishDialog
+        open={aiOpen}
+        candidates={[entry]}
+        preselectId={entry.id}
+        contextTitle={entry.title}
+        onClose={() => setAiOpen(false)}
       />
     </>
   )

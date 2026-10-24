@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { AiSettingsCard } from '@/features/ai/AiSettingsCard'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useCoupleSnapshot, partnerOf } from '@/features/couple/useCoupleSnapshot'
 import { getProfile, updateProfile, type Profile } from '@/services/profileService'
@@ -215,10 +216,12 @@ export function SettingsPage() {
         )}
       </Card>
 
+      {/* AI（BYOK）：真实配置卡片，Key 仅内存 */}
+      <AiSettingsCard />
+
       {/* 其余条目 */}
       <Card>
         <SettingRow title={t('settings.privacy')} desc={t('settings.privacyDesc')} />
-        <SettingRow title={t('settings.ai')} desc={t('settings.aiDesc')} badge={comingSoon} />
         <SettingRow title={t('settings.dataManagement')} desc={t('settings.dataManagementDesc')} badge={comingSoon} />
       </Card>
     </>
