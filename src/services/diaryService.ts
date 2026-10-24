@@ -250,6 +250,21 @@ export async function removeDiaryMedia(media: DiaryMedia): Promise<void> {
   await sb.storage.from(BUCKET).remove([media.storagePath])
 }
 
+/** 删除某作者的 全部日记（含照片）。逐篇删除以复用存储清理逻辑；返回删除数量 */
+export async function deleteAllMyDiaries(userId: string): Promise<number> {
+  if (!isSupabaseConfigured) return local.deleteAllMyDiaries(userId)
+  let count = 0
+  for (;;) {
+    const page = await listDiaries(0, { authorId: userId })
+    if (page.items.length === 0) break
+    for (const entry of page.items) {
+      await deleteDiary(entry.coupleId, entry.id)
+      count += 1
+    }
+  }
+  return count
+}
+
 export async function createMediaSignedUrl(path: string, expiresInSec = 3600): Promise<string> {
   if (!isSupabaseConfigured) return local.createMediaSignedUrl(path)
   const sb = requireSupabase()

@@ -51,6 +51,7 @@ export function StoryMonthPage() {
     <ChapterReader
       key={`${chapter.year}-${chapter.month}`}
       title={`${chapter.year} 年 ${chapter.month} 月`}
+      printPath={`/print/month/${chapter.key}`}
       subtitle={`${formatDateHuman(chapter.firstDate)} ${zhCN.story.rangeSep} ${formatDateHuman(chapter.lastDate)} · ${zhCN.story.monthEntries(chapter.entries.length)}`}
       pages={chapter.entries.map((entry) => ({ key: entry.id, entry }))}
       authorName={authorName}

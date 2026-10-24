@@ -1,7 +1,5 @@
 /**
- * 故事页（阶段 2 完整版）：
- * - 「月与年」：可见日记自动聚合的虚拟章节（封面心情色 + 日期范围 + 篇数）；
- * - 「自定义专题」：story_books 列表，可新建/编辑/删除/排序，不删原始日记。
+ * 故事页：月与年（虚拟章节 + 年度金叶入口）与自定义专题。
  */
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -186,55 +184,74 @@ export function StoryPage() {
           <LoadingState />
         ) : diariesQuery.isError ? (
           <ErrorState message={getErrorMessage(diariesQuery.error)} onRetry={() => void diariesQuery.refetch()} />
-        ) : years.length === 0 ? (
-          <EmptyState icon={<StoryIcon className="h-6 w-6" />} title={t('story.emptyTitle')} description={t('story.emptyDesc')} />
         ) : (
           <div className="space-y-8">
-            {years.map((year) => (
-              <section key={year.year} aria-label={`${year.year}`}>
-                <div className="mb-3 flex items-baseline gap-2">
-                  <h2 className="font-display text-xl text-bark">{year.year} 年</h2>
-                  <span className="text-xs text-bark-soft">{zhCN.story.monthEntries(year.total)}</span>
-                </div>
-                <ul className="grid gap-3 sm:grid-cols-2">
-                  {year.chapters.map((ch) => {
-                    const colors = Array.from(new Set(ch.entries.map((e) => getMood(e.mood).color))).slice(0, 3)
-                    return (
-                      <li key={ch.key}>
-                        <Link
-                          to={`/story/month/${ch.key}`}
-                          className="block rounded-card border border-paper-edge bg-card p-4 shadow-soft transition-colors hover:bg-paper-deep/60"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-paper-deep font-display text-lg text-bark">
-                              {ch.month}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-display text-base text-bark">
-                                {ch.year} 年 {ch.month} 月
-                              </p>
-                              <p className="text-xs text-bark-soft">
-                                {formatDateShort(ch.firstDate)}
-                                {zhCN.story.rangeSep}
-                                {formatDateShort(ch.lastDate)} · {zhCN.story.monthEntries(ch.entries.length)}
-                              </p>
+            {/* 年度金叶入口 */}
+            <Link
+              to={`/story/golden/${new Date().getFullYear()}`}
+              className="flex items-center justify-between rounded-card border border-leaf-gold/50 bg-leaf-gold/10 p-4 shadow-soft transition-colors hover:bg-leaf-gold/20"
+            >
+              <span className="flex items-center gap-3">
+                <span aria-hidden="true" className="text-2xl">
+                  🍂
+                </span>
+                <span>
+                  <span className="block font-display text-base text-bark">{t('yearly.title')}</span>
+                  <span className="block text-xs text-bark-soft">{t('yearly.preciousHint')}</span>
+                </span>
+              </span>
+              <span className="text-sm text-bark-soft">→</span>
+            </Link>
+
+            {years.length === 0 ? (
+              <EmptyState icon={<StoryIcon className="h-6 w-6" />} title={t('story.emptyTitle')} description={t('story.emptyDesc')} />
+            ) : (
+              years.map((year) => (
+                <section key={year.year} aria-label={`${year.year}`}>
+                  <div className="mb-3 flex items-baseline gap-2">
+                    <h2 className="font-display text-xl text-bark">{year.year} 年</h2>
+                    <span className="text-xs text-bark-soft">{zhCN.story.monthEntries(year.total)}</span>
+                  </div>
+                  <ul className="grid gap-3 sm:grid-cols-2">
+                    {year.chapters.map((ch) => {
+                      const colors = Array.from(new Set(ch.entries.map((e) => getMood(e.mood).color))).slice(0, 3)
+                      return (
+                        <li key={ch.key}>
+                          <Link
+                            to={`/story/month/${ch.key}`}
+                            className="block rounded-card border border-paper-edge bg-card p-4 shadow-soft transition-colors hover:bg-paper-deep/60"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-paper-deep font-display text-lg text-bark">
+                                {ch.month}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-display text-base text-bark">
+                                  {ch.year} 年 {ch.month} 月
+                                </p>
+                                <p className="text-xs text-bark-soft">
+                                  {formatDateShort(ch.firstDate)}
+                                  {zhCN.story.rangeSep}
+                                  {formatDateShort(ch.lastDate)} · {zhCN.story.monthEntries(ch.entries.length)}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          {/* 封面：本章心情色条 */}
-                          <div className="mt-3 flex gap-1.5" aria-hidden="true">
-                            {colors.map((c) => (
-                              <span key={c} className="h-2 flex-1 rounded-full" style={{ backgroundColor: c }} />
-                            ))}
-                            {colors.length === 0 ? <span className="h-2 flex-1 rounded-full bg-paper-edge" /> : null}
-                          </div>
-                          <p className="mt-2 text-xs text-bark-soft">{t('story.openChapter')} →</p>
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </section>
-            ))}
+                            {/* 封面：本章心情色条 */}
+                            <div className="mt-3 flex gap-1.5" aria-hidden="true">
+                              {colors.map((c) => (
+                                <span key={c} className="h-2 flex-1 rounded-full" style={{ backgroundColor: c }} />
+                              ))}
+                              {colors.length === 0 ? <span className="h-2 flex-1 rounded-full bg-paper-edge" /> : null}
+                            </div>
+                            <p className="mt-2 text-xs text-bark-soft">{t('story.openChapter')} →</p>
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              ))
+            )}
           </div>
         )
       ) : (
@@ -265,7 +282,9 @@ export function StoryPage() {
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate font-display text-base text-bark">{book.title}</span>
-                        <span className="mt-0.5 block truncate text-xs text-bark-soft">{book.intro || t('story.openChapter')} →</span>
+                        <span className="mt-0.5 block truncate text-xs text-bark-soft">
+                          {book.intro || `${t('story.openChapter')} →`}
+                        </span>
                       </span>
                     </Link>
                     <div className="flex shrink-0 flex-col gap-1 text-xs">
@@ -290,11 +309,7 @@ export function StoryPage() {
                         </button>
                       </div>
                       <div className="flex gap-2">
-                        <button
-                          type="button"
-                          className="text-bark-soft underline underline-offset-2 hover:text-bark"
-                          onClick={() => void openEdit(book)}
-                        >
+                        <button type="button" className="text-bark-soft underline underline-offset-2 hover:text-bark" onClick={() => void openEdit(book)}>
                           {t('common.edit')}
                         </button>
                         <button type="button" className="text-maple underline underline-offset-2" onClick={() => setDeleting({ id: book.id, title: book.title })}>

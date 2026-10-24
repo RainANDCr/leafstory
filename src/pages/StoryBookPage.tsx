@@ -71,6 +71,7 @@ export function StoryBookPage() {
         subtitle={book.intro ?? undefined}
         pages={pages}
         authorName={authorName}
+        printPath={`/print/book/${book.id}`}
       />
 
       {/* AI 整理：候选为本专题中当前用户可见的日记，默认全不选（逐篇确认） */}

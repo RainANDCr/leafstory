@@ -30,9 +30,11 @@ interface ChapterReaderProps {
   pages: readonly ReaderPage[]
   /** 列表模式下显示的作者名 */
   authorName: (authorId: string) => string
+  /** 打印路由（如 /print/month/2026-10） */
+  printPath?: string
 }
 
-export function ChapterReader({ title, subtitle, pages, authorName }: ChapterReaderProps) {
+export function ChapterReader({ title, subtitle, pages, authorName, printPath }: ChapterReaderProps) {
   const [mode, setMode] = useState<'reader' | 'list'>('reader')
   const [index, setIndex] = useState(0)
   const total = pages.length
@@ -62,7 +64,16 @@ export function ChapterReader({ title, subtitle, pages, authorName }: ChapterRea
           <h1 className="font-display text-2xl tracking-wide text-bark">{title}</h1>
           {subtitle ? <p className="mt-1 text-sm text-bark-soft">{subtitle}</p> : null}
         </div>
-        <div className="flex rounded-2xl bg-paper-deep p-1 text-xs" role="tablist" aria-label={zhCN.story.title}>
+        <div className="flex gap-2">
+          {printPath ? (
+            <Link
+              to={printPath}
+              className="inline-flex min-h-11 items-center rounded-2xl border border-paper-edge bg-card px-4 text-sm text-bark transition-colors hover:bg-paper-deep"
+            >
+              🖨 {zhCN.print.action}
+            </Link>
+          ) : null}
+          <div className="flex rounded-2xl bg-paper-deep p-1 text-xs" role="tablist" aria-label={zhCN.story.title}>
           {(
             [
               ['reader', zhCN.story.readerMode],
@@ -82,6 +93,7 @@ export function ChapterReader({ title, subtitle, pages, authorName }: ChapterRea
               {label}
             </button>
           ))}
+          </div>
         </div>
       </div>
 

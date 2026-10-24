@@ -28,6 +28,7 @@ export const LS_KEYS = {
   quizSessions: 'question_sessions',
   quizAnswers: 'question_answers',
   quizFavorites: 'question_favorites',
+  goldenLeaves: 'golden_leaves',
 } as const
 
 export function readJSON<T>(key: string, fallback: T): T {

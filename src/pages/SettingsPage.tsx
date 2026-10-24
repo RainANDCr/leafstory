@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AiSettingsCard } from '@/features/ai/AiSettingsCard'
+import { DataManagementCard } from '@/features/settings/DataManagementCard'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useCoupleSnapshot, partnerOf } from '@/features/couple/useCoupleSnapshot'
 import { getProfile, updateProfile, type Profile } from '@/services/profileService'
@@ -150,7 +151,6 @@ export function SettingsPage() {
 
   const couple = coupleQuery.data
   const partner = partnerOf(couple?.info ?? null, userId)
-  const comingSoon = t('settings.comingSoon')
 
   return (
     <>
@@ -219,10 +219,12 @@ export function SettingsPage() {
       {/* AI（BYOK）：真实配置卡片，Key 仅内存 */}
       <AiSettingsCard />
 
+      {/* 数据管理：导出 / 删除 / 解除配对 / 设备数据 */}
+      <DataManagementCard />
+
       {/* 其余条目 */}
       <Card>
         <SettingRow title={t('settings.privacy')} desc={t('settings.privacyDesc')} />
-        <SettingRow title={t('settings.dataManagement')} desc={t('settings.dataManagementDesc')} badge={comingSoon} />
       </Card>
     </>
   )

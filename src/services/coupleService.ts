@@ -114,3 +114,16 @@ export async function joinCouple(code: string): Promise<string> {
   if (error) throw error
   return data as string
 }
+
+/**
+ * 解除配对：删除双方成员关系（云端 RPC / 本地同构）。
+ * 后果：双方立即停止互相访问；各自写的日记仍归各自可见；
+ * 共同数据（纪念日/地点/心愿/问答/信件）保留但被冻结（双方均不可见）。
+ */
+export async function dissolveCouple(): Promise<void> {
+  if (!isSupabaseConfigured) return local.dissolveCouple()
+  const sb = getSupabase()
+  if (!sb) throw new Error('数据库尚未连接')
+  const { error } = await sb.rpc('dissolve_couple')
+  if (error) throw error
+}

@@ -69,6 +69,13 @@ export function DiaryDetailPage() {
         description={`${zhCN.diary.authorBy(authorName)} · ${formatDateHuman(entry.happenedOn)}`}
         actions={
           <>
+            <Button
+              variant="ghost"
+              onClick={() => navigate(`/print/diary/${entry.id}`)}
+              title={zhCN.yearly.printAction}
+            >
+              🖨
+            </Button>
             <Button variant="secondary" onClick={() => setAiOpen(true)}>
               ✨ {t('ai.entryPolish')}
             </Button>

@@ -1409,3 +1409,76 @@ export async function favoriteQuizToDiary(sessionId: string, diaryId: string, us
   favorites.push({ id: randomId(), sessionId, diaryEntryId: diaryId, createdBy: userId, createdAt: new Date().toISOString() })
   writeJSON(LS_KEYS.quizFavorites, favorites)
 }
+
+// ------------------------------------------------------------ 年度金叶（用户选择）与解除配对
+
+export interface LocalGoldenLeaf {
+  coupleId: string
+  year: number
+  title: string | null
+  preciousDay: string | null
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export async function getGoldenLeaf(coupleId: string, year: number): Promise<LocalGoldenLeaf | null> {
+  if (myCoupleIdOrNull() !== coupleId) return null
+  return readJSON<Record<string, LocalGoldenLeaf>>(LS_KEYS.goldenLeaves, {})[`${coupleId}:${year}`] ?? null
+}
+
+export async function saveGoldenLeaf(
+  coupleId: string,
+  year: number,
+  userId: string,
+  patch: { title: string | null; preciousDay: string | null },
+): Promise<void> {
+  if (requireCoupleId() !== coupleId) throw new Error('无权写入这个双人空间')
+  const leaves = readJSON<Record<string, LocalGoldenLeaf>>(LS_KEYS.goldenLeaves, {})
+  const key = `${coupleId}:${year}`
+  const now = new Date().toISOString()
+  const existing = leaves[key]
+  leaves[key] = {
+    coupleId,
+    year,
+    title: patch.title,
+    preciousDay: patch.preciousDay,
+    createdBy: existing?.createdBy ?? userId,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+  }
+  writeJSON(LS_KEYS.goldenLeaves, leaves)
+}
+
+/** 解除配对：删除双方成员关系并作废邀请；共同数据保留但冻结（双方均不可见） */
+export async function dissolveCouple(): Promise<void> {
+  const userId = requireUserId()
+  const mine = myMembership(userId)
+  if (!mine) throw new Error('你还没有双人空间')
+
+  const invitations = readJSON<LocalInvitation[]>(LS_KEYS.invitations, [])
+  for (const inv of invitations) {
+    if (inv.coupleId === mine.coupleId && !inv.usedAt) inv.usedAt = new Date().toISOString()
+  }
+  writeJSON(LS_KEYS.invitations, invitations)
+
+  writeJSON(
+    LS_KEYS.members,
+    readJSON<LocalMember[]>(LS_KEYS.members, []).filter((m) => m.coupleId !== mine.coupleId),
+  )
+  notifySession()
+}
+
+/** 删除某作者的全部本地日记（含 IndexedDB 照片），返回数量 */
+export async function deleteAllMyDiaries(userId: string): Promise<number> {
+  let count = 0
+  for (;;) {
+    const page = await listDiaries(0, { authorId: userId })
+    if (page.items.length === 0) break
+    for (const entry of page.items) {
+      await deleteDiary(entry.coupleId, entry.id)
+      count += 1
+    }
+  }
+  return count
+}
