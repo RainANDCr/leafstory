@@ -37,3 +37,66 @@ export function formatDateHuman(iso: string): string {
   const d = parseISODate(iso)
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
 }
+
+/** yyyy-mm-dd → 「10月24日」（同年场景的短显示） */
+export function formatDateShort(iso: string): string {
+  const d = parseISODate(iso)
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
+
+/** yyyy-mm-dd → 「2026年10月」（日记时间轴的月份分组） */
+export function formatMonthLabel(iso: string): string {
+  const d = parseISODate(iso)
+  return `${d.getFullYear()}年${d.getMonth() + 1}月`
+}
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+}
+
+/**
+ * 纪念日的下一次发生日（本地日历日）：
+ * - 每年重复：返回今天或之后最近的一次（2/29 在平年按 2/28 处理）；
+ * - 一次性：返回其本身（可能已在过去）。
+ */
+export function nextOccurrence(dateISO: string, repeatsYearly: boolean, today: Date = new Date()): string {
+  const d = parseISODate(dateISO)
+  if (!repeatsYearly) return dateISO
+
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const day = d.getDate()
+  const month = d.getMonth()
+
+  const at = (year: number): Date => {
+    // 2/29 在平年收敛到 2/28，避免 Date 自动跳到 3 月
+    if (month === 1 && day === 29 && !isLeapYear(year)) return new Date(year, 1, 28)
+    return new Date(year, month, day)
+  }
+
+  let occ = at(todayStart.getFullYear())
+  if (occ < todayStart) occ = at(todayStart.getFullYear() + 1)
+  return toISODate(occ)
+}
+
+export type AnniversaryStatus = 'upcoming' | 'today' | 'passed'
+
+export interface AnniversaryCountdown {
+  status: AnniversaryStatus
+  /** 距离下一次发生日（或对一次性过去事件：自那天以来）的天数 */
+  days: number
+  /** 下一次发生日（一次性事件为原日期） */
+  nextISO: string
+}
+
+/** 纪念日倒计时/已过天数：按用户本地日历日计算，无 UTC 跨天误差 */
+export function anniversaryCountdown(
+  dateISO: string,
+  repeatsYearly: boolean,
+  today: Date = new Date(),
+): AnniversaryCountdown {
+  const nextISO = nextOccurrence(dateISO, repeatsYearly, today)
+  const diff = daysBetween(toISODate(today), nextISO)
+  if (diff === 0) return { status: 'today', days: 0, nextISO }
+  if (diff > 0) return { status: 'upcoming', days: diff, nextISO }
+  return { status: 'passed', days: -diff, nextISO }
+}

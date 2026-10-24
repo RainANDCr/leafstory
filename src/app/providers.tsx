@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
+import { AuthProvider } from '@/features/auth/AuthContext'
 
 /**
- * 全局 Provider：目前只有 TanStack Query（服务器状态缓存）。
+ * 全局 Provider：TanStack Query（服务器状态缓存）+ 认证上下文。
  * 主题/语言等 Context 在需要时再按序加入，保持克制。
  */
 export function AppProviders({ children }: { children: ReactNode }) {
@@ -20,5 +21,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
       }),
   )
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  )
 }

@@ -30,12 +30,34 @@
 - 日志、报错、分析事件中不记录信件正文、日记内容或 Key。
 - 地图瓦片请求可能暴露访问区域，需在隐私说明中披露并提供列表视图替代。
 
-## 阶段 0 状态
+## 阶段 1 状态（迁移 00002 落地）
 
-- 迁移 00001 已为 profiles/couples/couple_members 启用 RLS：profiles 仅本人可读写；couples/couple_members 全拒（等待阶段 1 RPC）。
-- 私有桶 `diary-media` 已建，对象策略待阶段 1。
-- 未配置 Supabase 时应用显示骨架与明确提示，不产生数据、不假装保存。
+- **邀请码**：库中只存 SHA-256 哈希；24 小时有效、一次性；`join_couple_with_code` 在事务内「验哈希 → FOR UPDATE 锁空间 → 人数上限校验 → 入组 → 作废邀请」，并发下第三人无法加入。所有配对 RPC 仅 `authenticated` 可执行，固定 `search_path=''`。
+- **日记**：select 策略 = 作者本人（含草稿/私密）∪（双方可见 ∧ 已发布 ∧ 空间有效成员）；update/delete 仅作者。媒体行可见性跟随所属日记。
+- **纪念日**：双人空间有效成员可读写。
+- **Storage**：私有桶 `diary-media` 路径级策略——`couple/{couple_id}/…` 前缀仅该空间有效成员可读/写/删；非法路径经 `private.storage_couple_id` 安全解析为 null（拒绝）。
+- **帮助函数**：`private.is_active_couple_member` / `private.is_partner` / `private.storage_couple_id` 均为 SECURITY DEFINER + 固定 search_path，仅授权 `authenticated` 执行。
+- **注册即建档案**：`handle_new_user` 触发器，避免依赖客户端补建。
 
-## 双账号（三账号）验收方法
+### 已知限制（如实说明）
 
-每个阶段交付后：A/B 配对互访共享数据；A 的私密日记 B 不可见；C（无关账号）通过 UI 和直接 REST（携带自己的 JWT）均无法读取 A/B 任何数据；未到期信件/未揭晓答案对双方之外均不可读。具体步骤见各阶段交付说明。
+- 服务端 MIME 深度嗅探未实现（当前为客户端类型/大小校验 + 压缩转 JPEG + RLS 路径权限）；可在阶段 7 加 Edge Function 校验。
+- 迁移与 RLS 尚未在真实 Supabase 项目验证（本机无项目）；上线前必须完成下面的三账号实测。
+
+## 三账号隐私验收步骤（每阶段交付后执行）
+
+前置：真实 Supabase 项目已按序执行 00001、00002 迁移；前端 `.env` 已配置。
+
+1. **注册配对**：浏览器 A 注册账号 a@example.com；「配对」页创建空间，复制邀请码。浏览器 B（无痕窗口）注册 b@example.com，输入邀请码加入。
+2. **共享与私密**：A 写两篇日记——一篇默认「双方可见」，一篇切「仅自己可见」，另存一篇草稿。B 的日记列表与森林树应只见共享篇；B 直接访问私密篇/草稿的 URL（可从 A 浏览器复制）应显示「这篇日记不存在，或你没有权限查看」。
+3. **C 越权测试**：浏览器 C（第二个无痕窗口）注册 c@example.com：森林/日记/足迹均为空态（引导配对）；用 C 的登录态直接调 REST：
+   ```bash
+   curl -s "https://YOUR_PROJECT.supabase.co/rest/v1/diary_entries?select=id" \
+     -H "apikey: <anon key>" -H "Authorization: Bearer <C 的 access token>"
+   ```
+   应返回 `[]`（RLS 过滤）。同理验证 `anniversaries`、`couple_members`、`storage/object/list`（应 403/空）。
+4. **邀请码边界**：A 的邀请码被 B 使用后，C 再用同一码 →「邀请码无效或已过期」；把系统时间过后（或等待过期）再试 → 同样拒绝；A 重新生成后旧码立即失效。
+5. **媒体权限**：B 打开 A 的共享日记能看到照片（签名 URL）；C 拿到同样的图片 URL 在新无痕窗口直接打开（签名过期后）应 400/403。
+6. **纪念日**：B 添加「在一起」纪念日，A 可见且可编辑；C 不可见。
+
+任一步不符合预期即视为阶段验收未通过，先修后进下一阶段。

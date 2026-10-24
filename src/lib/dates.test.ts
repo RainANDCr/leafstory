@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { daysBetween, formatDateHuman, parseISODate, toISODate } from './dates'
+import { anniversaryCountdown, daysBetween, formatDateHuman, nextOccurrence, parseISODate, toISODate } from './dates'
 
 describe('toISODate', () => {
   it('把本地日期格式化为 yyyy-mm-dd', () => {
@@ -43,5 +43,54 @@ describe('daysBetween', () => {
 describe('formatDateHuman', () => {
   it('输出中文年月日', () => {
     expect(formatDateHuman('2026-10-24')).toBe('2026年10月24日')
+  })
+})
+
+describe('nextOccurrence', () => {
+  const today = new Date(2026, 9, 24) // 2026-10-24
+
+  it('每年重复：今年的发生日已过则取明年', () => {
+    expect(nextOccurrence('2024-06-01', true, today)).toBe('2027-06-01')
+  })
+
+  it('每年重复：今年的发生日未到则取今年', () => {
+    expect(nextOccurrence('2024-12-30', true, today)).toBe('2026-12-30')
+  })
+
+  it('每年重复：恰好在今天', () => {
+    expect(nextOccurrence('2020-10-24', true, today)).toBe('2026-10-24')
+  })
+
+  it('每年重复：2/29 在平年收敛到 2/28', () => {
+    expect(nextOccurrence('2024-02-29', true, new Date(2026, 11, 31))).toBe('2027-02-28')
+    expect(nextOccurrence('2024-02-29', true, new Date(2028, 0, 1))).toBe('2028-02-29')
+  })
+
+  it('一次性事件返回原日期', () => {
+    expect(nextOccurrence('2020-05-20', false, today)).toBe('2020-05-20')
+  })
+})
+
+describe('anniversaryCountdown', () => {
+  it('未来事件：还有 N 天', () => {
+    const c = anniversaryCountdown('2026-10-29', true, new Date(2026, 9, 24))
+    expect(c).toEqual({ status: 'upcoming', days: 5, nextISO: '2026-10-29' })
+  })
+
+  it('就是今天', () => {
+    const c = anniversaryCountdown('2020-10-24', true, new Date(2026, 9, 24))
+    expect(c.status).toBe('today')
+    expect(c.days).toBe(0)
+  })
+
+  it('按年重复的过去事件：倒计到下一次（跨年）', () => {
+    const c = anniversaryCountdown('2020-01-01', true, new Date(2026, 9, 24))
+    expect(c.status).toBe('upcoming')
+    expect(c.nextISO).toBe('2027-01-01')
+  })
+
+  it('一次性过去事件：已过 N 天', () => {
+    const c = anniversaryCountdown('2026-10-01', false, new Date(2026, 9, 24))
+    expect(c).toEqual({ status: 'passed', days: 23, nextISO: '2026-10-01' })
   })
 })

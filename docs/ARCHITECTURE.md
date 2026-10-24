@@ -44,4 +44,4 @@ docs/           项目文档
 
 ## 阶段路线
 
-阶段 0（当前）骨架 → 1 账户/日记/纪念日 MVP → 2 树+故事书 → 3 心愿瓶+时光邮局 → 4 地图+问答 → 5 AI（BYOK）→ 6 年度金叶+导出+数据管理 → 7 测试+部署+APK → 8（可选）Windows EXE。
+阶段 0 骨架 → 阶段 1（当前）账户/配对/日记/纪念日 MVP（数据层 `src/services`，领域模块 `src/features/{auth,couple,diary,anniversaries,forest}`）→ 2 树+故事书 → 3 心愿瓶+时光邮局 → 4 地图+问答 → 5 AI（BYOK）→ 6 年度金叶+导出+数据管理 → 7 测试+部署+APK → 8（可选）Windows EXE。
