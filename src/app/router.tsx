@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, createHashRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AppLayout } from './AppLayout'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { ForestPage } from '@/pages/ForestPage'
@@ -18,8 +18,8 @@ import { LoginPage } from '@/pages/LoginPage'
 import { PairingPage } from '@/pages/PairingPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
-function createAppRouter() {
-  return createBrowserRouter([
+function createRoutes() {
+  return [
     {
       path: '/',
       element: <AppLayout />,
@@ -52,7 +52,18 @@ function createAppRouter() {
         { path: '*', element: <NotFoundPage /> },
       ],
     },
-  ])
+  ]
+}
+
+function createAppRouter() {
+  // 桌面（Electron，file://）用 HashRouter；网页用 BrowserRouter：
+  // - GitHub Pages 部署在 /<repo>/ 子路径时由构建期 --base 注入 basename；
+  // - 本地开发与根路径部署时 BASE_URL 为 '/'，basename 为空。
+  const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent)
+  const basename = import.meta.env.BASE_URL.replace(/\/$/, '')
+
+  if (isDesktop) return createHashRouter(createRoutes())
+  return createBrowserRouter(createRoutes(), { basename: basename || undefined })
 }
 
 export function AppRouter() {

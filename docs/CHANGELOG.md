@@ -2,6 +2,18 @@
 
 格式参考 keepachangelog.com；阶段号与《落叶物语全阶段开发提示词》一致。
 
+## [1.1.0] · 阶段 8 —— Windows EXE（Electron）+ GitHub Pages 部署就绪（2026-10-25）
+
+### 新增
+
+- **Windows EXE（实测构建成功）**：Electron 主进程（外部链接走系统浏览器、file:// 下 HashRouter、Sandbox+contextIsolation）；electron-builder 产出 NSIS 安装包 / 单文件便携版 / 免安装目录版三个产物并冒烟测试通过；国内网络镜像方案与踩坑记录见 docs/WINDOWS_BUILD.md。
+- **GitHub Pages 部署就绪**：Actions 工作流（lint→typecheck→build→deploy）、SPA 子路径适配（--base=/leafstory/、404.html 回退、router basename、Electron 下自动 HashRouter）。
+- 测试环境与开发者 .env 隔离（Vitest 强制本地模式），避免配置漂移导致误报。
+
+### 未完成（网络阻碍，如实说明）
+
+- 本机直连 github.com 超时（api.github.com 可达但推送必须走主站），仓库尚未创建/推送；待网络可达后推送即自动触发 Pages 部署。
+
 ## [1.0.0] · 阶段 7 —— 回归测试、部署准备与 Android 工程（2026-10-25）
 
 ### 新增

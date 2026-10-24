@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>落叶物语</title>
+    <!-- GitHub Pages 404 回退：记录用户想访问的路径后跳回应用基路径，
+         由 index.html 里的对应脚本恢复路由（SPA 子路径刷新不 404）。
+         注意：仓库名若不叫 leafstory，请同步修改此处与 deploy.yml 的 --base。 -->
+    <script>
+      ;(function () {
+        sessionStorage.redirect = location.pathname + location.search + location.hash
+        location.replace('/leafstory/')
+      })()
+    </script>
+  </head>
+  <body></body>
+</html>
