@@ -102,11 +102,15 @@ async function main() {
     fail('couple_members 读取', e.message)
   }
 
-  // 6. 信件正文表零 SELECT：无策略时 REST 应 401/空权限错误而不是返回行
+  // 6. 信件正文表零 SELECT：RLS 全拒时 PostgREST 返回 200+空数组（或 401/403）
   try {
-    const { status } = await rest('letter_contents?select=*', a.access_token)
-    if (status === 401 || status === 403) ok(`letter_contents 对客户端直读拒绝（status=${status}，密封生效）`)
-    else fail('letter_contents 拒绝', `status=${status}（期望 401/403）`)
+    const { status, body } = await rest('letter_contents?select=*', a.access_token)
+    const emptyOk = status === 200 && Array.isArray(body) && body.length === 0
+    if (emptyOk || status === 401 || status === 403) {
+      ok(`letter_contents 对客户端直读不可见（status=${status}${emptyOk ? ' 空结果' : ''}，密封生效）`)
+    } else {
+      fail('letter_contents 拒绝', `status=${status} body=${JSON.stringify(body).slice(0, 120)}（可能泄露！）`)
+    }
   } catch (e) {
     fail('letter_contents 拒绝', e.message)
   }
