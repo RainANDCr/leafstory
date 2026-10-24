@@ -23,6 +23,11 @@ export const LS_KEYS = {
   wishEvents: 'wish_events',
   wishLinks: 'wish_diary_links',
   letters: 'letters',
+  places: 'places',
+  placeLinks: 'diary_place_links',
+  quizSessions: 'question_sessions',
+  quizAnswers: 'question_answers',
+  quizFavorites: 'question_favorites',
 } as const
 
 export function readJSON<T>(key: string, fallback: T): T {

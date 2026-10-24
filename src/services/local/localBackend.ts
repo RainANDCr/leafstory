@@ -19,6 +19,8 @@ import type { DiaryDetail, DiaryPage } from '../diaryService'
 import type { StoryBook, StoryBookDetail, StoryBookInput } from '../storyService'
 import type { Wish, WishInput, WishStatus } from '../wishService'
 import type { LetterContent, LetterEnvelope, LetterInput } from '../letterService'
+import type { Place, PlaceInput } from '../placeService'
+import type { QuizSessionView } from '../quizService'
 import type { DiaryEntry, DiaryFilter, DiaryInput, DiaryMedia } from '@/features/diary/types'
 
 // ------------------------------------------------------------ 类型
@@ -1100,4 +1102,310 @@ export async function deleteLetter(letterId: string): Promise<void> {
   if (!row || row.coupleId !== coupleId || row.authorId !== userId) throw new Error('NOT_FOUND')
   delete letters[letterId]
   writeJSON(LS_KEYS.letters, letters)
+}
+
+// ------------------------------------------------------------ 地点足迹
+
+interface LocalPlace {
+  id: string
+  coupleId: string
+  name: string
+  region: string | null
+  note: string | null
+  happenedOn: string | null
+  latitude: number | null
+  longitude: number | null
+  isSpecial: boolean
+  specialLabel: string | null
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface LocalPlaceLink {
+  placeId: string
+  diaryEntryId: string
+  linkedBy: string
+  createdAt: string
+}
+
+export async function listPlaces(coupleId: string): Promise<Place[]> {
+  if (myCoupleIdOrNull() !== coupleId) return []
+  const userId = requireUserId()
+  const links = readJSON<LocalPlaceLink[]>(LS_KEYS.placeLinks, [])
+  const diaries = readJSON<Record<string, LocalDiary>>(LS_KEYS.diaries, {})
+
+  // 关联可见性跟随日记（镜像 RLS）：私密/草稿的关联只回给作者
+  const byPlace = new Map<string, Array<{ id: string; title: string; happenedOn: string }>>()
+  for (const link of links) {
+    const entry = diaries[link.diaryEntryId]
+    if (!entry || entry.coupleId !== coupleId || !visibleTo(entry, userId)) continue
+    const list = byPlace.get(link.placeId) ?? []
+    list.push({ id: entry.id, title: entry.title, happenedOn: entry.happenedOn })
+    byPlace.set(link.placeId, list)
+  }
+
+  return Object.values(readJSON<Record<string, LocalPlace>>(LS_KEYS.places, {}))
+    .filter((r) => r.coupleId === coupleId)
+    .sort((a, b) => (b.happenedOn ?? '').localeCompare(a.happenedOn ?? ''))
+    .map((r) => ({
+      id: r.id,
+      coupleId: r.coupleId,
+      name: r.name,
+      region: r.region,
+      note: r.note,
+      happenedOn: r.happenedOn,
+      latitude: r.latitude,
+      longitude: r.longitude,
+      isSpecial: r.isSpecial,
+      specialLabel: r.specialLabel,
+      createdBy: r.createdBy,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      linkedDiaries: byPlace.get(r.id) ?? [],
+    }))
+}
+
+function requirePlace(id: string): { places: Record<string, LocalPlace>; row: LocalPlace } {
+  const coupleId = requireCoupleId()
+  const places = readJSON<Record<string, LocalPlace>>(LS_KEYS.places, {})
+  const row = places[id]
+  if (!row || row.coupleId !== coupleId) throw new Error('NOT_FOUND')
+  return { places, row }
+}
+
+function syncPlaceLinks(placeId: string, diaryIds: string[] | undefined, userId: string): void {
+  if (!diaryIds) return
+  const { row } = requirePlace(placeId)
+  const diaries = readJSON<Record<string, LocalDiary>>(LS_KEYS.diaries, {})
+  const currentUserId = requireUserId()
+
+  // 先整体校验，全部通过才落盘——避免留下半成品
+  for (const diaryId of diaryIds) {
+    const entry = diaries[diaryId]
+    if (!entry || entry.coupleId !== row.coupleId || !visibleTo(entry, currentUserId)) {
+      throw new Error('NOT_FOUND')
+    }
+  }
+  const links = readJSON<LocalPlaceLink[]>(LS_KEYS.placeLinks, []).filter((l) => l.placeId !== placeId)
+  for (const diaryId of diaryIds) {
+    links.push({ placeId, diaryEntryId: diaryId, linkedBy: userId, createdAt: new Date().toISOString() })
+  }
+  writeJSON(LS_KEYS.placeLinks, links)
+}
+
+export async function createPlace(coupleId: string, userId: string, input: PlaceInput): Promise<void> {
+  if (requireCoupleId() !== coupleId) throw new Error('无权写入这个双人空间')
+  const places = readJSON<Record<string, LocalPlace>>(LS_KEYS.places, {})
+  const id = randomId()
+  const now = new Date().toISOString()
+  places[id] = {
+    id,
+    coupleId,
+    name: input.name.trim(),
+    region: input.region?.trim() || null,
+    note: input.note?.trim() || null,
+    happenedOn: input.happenedOn || null,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    isSpecial: input.isSpecial,
+    specialLabel: input.isSpecial ? input.specialLabel?.trim() || null : null,
+    createdBy: userId,
+    createdAt: now,
+    updatedAt: now,
+  }
+  try {
+    writeJSON(LS_KEYS.places, places)
+    syncPlaceLinks(id, input.diaryIds, userId)
+  } catch (err) {
+    // 关联校验失败：回滚，不留半成品
+    delete places[id]
+    writeJSON(LS_KEYS.places, places)
+    throw err
+  }
+}
+
+export async function updatePlace(id: string, input: PlaceInput, userId: string): Promise<void> {
+  const { places, row } = requirePlace(id)
+  row.name = input.name.trim()
+  row.region = input.region?.trim() || null
+  row.note = input.note?.trim() || null
+  row.happenedOn = input.happenedOn || null
+  row.latitude = input.latitude
+  row.longitude = input.longitude
+  row.isSpecial = input.isSpecial
+  row.specialLabel = input.isSpecial ? input.specialLabel?.trim() || null : null
+  row.updatedAt = new Date().toISOString()
+  places[id] = row
+  writeJSON(LS_KEYS.places, places)
+  syncPlaceLinks(id, input.diaryIds, userId)
+}
+
+export async function deletePlace(id: string): Promise<void> {
+  const { places } = requirePlace(id)
+  delete places[id]
+  writeJSON(LS_KEYS.places, places)
+  writeJSON(
+    LS_KEYS.placeLinks,
+    readJSON<LocalPlaceLink[]>(LS_KEYS.placeLinks, []).filter((l) => l.placeId !== id),
+  )
+}
+
+// ------------------------------------------------------------ 默契小问答
+
+interface LocalQuizSession {
+  id: string
+  coupleId: string
+  questionId: string
+  status: 'open' | 'revealed'
+  startedBy: string
+  endedEarlyBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface LocalQuizAnswer {
+  id: string
+  sessionId: string
+  authorId: string
+  content: string
+  emoji: string | null
+  submitted: boolean
+  submittedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface LocalQuizFavorite {
+  id: string
+  sessionId: string
+  diaryEntryId: string
+  createdBy: string
+  createdAt: string
+}
+
+/**
+ * 两阶段可见性（镜像 RLS）：对方的答案只有「对方已提交 且 我已提交」时可读；
+ * 草稿永不可见（也探测不到存在）。
+ */
+export async function listQuizSessions(coupleId: string, myUserId: string, partnerUserId: string | null): Promise<QuizSessionView[]> {
+  if (myCoupleIdOrNull() !== coupleId) return []
+  const sessions = Object.values(readJSON<Record<string, LocalQuizSession>>(LS_KEYS.quizSessions, {}))
+    .filter((s) => s.coupleId === coupleId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const answers = readJSON<LocalQuizAnswer[]>(LS_KEYS.quizAnswers, [])
+  const favorites = readJSON<LocalQuizFavorite[]>(LS_KEYS.quizFavorites, [])
+  const favoriteSet = new Set(favorites.map((f) => f.sessionId))
+
+  return sessions.map((s) => {
+    const mine = answers.find((a) => a.sessionId === s.id && a.authorId === myUserId)
+    const partner = partnerUserId ? answers.find((a) => a.sessionId === s.id && a.authorId === partnerUserId) : undefined
+    const partnerVisible = Boolean(partner?.submitted && mine?.submitted)
+    return {
+      id: s.id,
+      questionId: s.questionId,
+      status: s.status,
+      startedBy: s.startedBy,
+      endedEarlyBy: s.endedEarlyBy,
+      createdAt: s.createdAt,
+      myAnswer: mine
+        ? { authorId: mine.authorId, content: mine.content, emoji: mine.emoji, submitted: mine.submitted, submittedAt: mine.submittedAt }
+        : null,
+      partnerAnswer: partnerVisible && partner
+        ? { authorId: partner.authorId, content: partner.content, emoji: partner.emoji, submitted: partner.submitted, submittedAt: partner.submittedAt }
+        : null,
+      bothSubmitted: Boolean(mine?.submitted && partner?.submitted),
+      isFavorite: favoriteSet.has(s.id),
+    }
+  })
+}
+
+export async function startQuizSession(coupleId: string, userId: string, questionId: string): Promise<void> {
+  if (requireCoupleId() !== coupleId) throw new Error('无权写入这个双人空间')
+  const sessions = readJSON<Record<string, LocalQuizSession>>(LS_KEYS.quizSessions, {})
+  const id = randomId()
+  const now = new Date().toISOString()
+  sessions[id] = { id, coupleId, questionId, status: 'open', startedBy: userId, endedEarlyBy: null, createdAt: now, updatedAt: now }
+  writeJSON(LS_KEYS.quizSessions, sessions)
+}
+
+export async function saveQuizAnswer(sessionId: string, input: { content: string; emoji: string | null; submit: boolean }): Promise<void> {
+  const coupleId = requireCoupleId()
+  const userId = requireUserId()
+  const sessions = readJSON<Record<string, LocalQuizSession>>(LS_KEYS.quizSessions, {})
+  const session = sessions[sessionId]
+  if (!session || session.coupleId !== coupleId) throw new Error('NOT_FOUND')
+
+  const answers = readJSON<LocalQuizAnswer[]>(LS_KEYS.quizAnswers, [])
+  const mine = answers.find((a) => a.sessionId === sessionId && a.authorId === userId)
+  const now = new Date().toISOString()
+  if (mine) {
+    mine.content = input.content
+    mine.emoji = input.emoji
+    mine.submitted = input.submit
+    mine.submittedAt = input.submit ? now : null
+    mine.updatedAt = now
+  } else {
+    answers.push({
+      id: randomId(),
+      sessionId,
+      authorId: userId,
+      content: input.content,
+      emoji: input.emoji,
+      submitted: input.submit,
+      submittedAt: input.submit ? now : null,
+      createdAt: now,
+      updatedAt: now,
+    })
+  }
+  writeJSON(LS_KEYS.quizAnswers, answers)
+
+  if (input.submit) {
+    const rows = answers.filter((a) => a.sessionId === sessionId)
+    if (rows.length >= 2 && rows.every((r) => r.submitted)) {
+      session.status = 'revealed'
+      session.updatedAt = now
+      sessions[sessionId] = session
+      writeJSON(LS_KEYS.quizSessions, sessions)
+    }
+  }
+}
+
+export async function endQuizEarly(sessionId: string, userId: string): Promise<void> {
+  const coupleId = requireCoupleId()
+  const sessions = readJSON<Record<string, LocalQuizSession>>(LS_KEYS.quizSessions, {})
+  const session = sessions[sessionId]
+  if (!session || session.coupleId !== coupleId) throw new Error('NOT_FOUND')
+  session.status = 'revealed'
+  session.endedEarlyBy = userId
+  session.updatedAt = new Date().toISOString()
+  sessions[sessionId] = session
+  writeJSON(LS_KEYS.quizSessions, sessions)
+}
+
+export async function skipQuizSession(sessionId: string): Promise<void> {
+  const coupleId = requireCoupleId()
+  const sessions = readJSON<Record<string, LocalQuizSession>>(LS_KEYS.quizSessions, {})
+  const session = sessions[sessionId]
+  if (!session || session.coupleId !== coupleId) throw new Error('NOT_FOUND')
+  const answers = readJSON<LocalQuizAnswer[]>(LS_KEYS.quizAnswers, []).filter((a) => a.sessionId === sessionId)
+  if (answers.some((a) => a.submitted)) {
+    throw new Error('已有提交的答案，不能跳过；可以「提前结束」')
+  }
+  delete sessions[sessionId]
+  writeJSON(LS_KEYS.quizSessions, sessions)
+  writeJSON(
+    LS_KEYS.quizAnswers,
+    readJSON<LocalQuizAnswer[]>(LS_KEYS.quizAnswers, []).filter((a) => a.sessionId !== sessionId),
+  )
+}
+
+export async function favoriteQuizToDiary(sessionId: string, diaryId: string, userId: string): Promise<void> {
+  const coupleId = requireCoupleId()
+  const sessions = readJSON<Record<string, LocalQuizSession>>(LS_KEYS.quizSessions, {})
+  const session = sessions[sessionId]
+  if (!session || session.coupleId !== coupleId) throw new Error('NOT_FOUND')
+  const favorites = readJSON<LocalQuizFavorite[]>(LS_KEYS.quizFavorites, []).filter((f) => f.sessionId !== sessionId)
+  favorites.push({ id: randomId(), sessionId, diaryEntryId: diaryId, createdBy: userId, createdAt: new Date().toISOString() })
+  writeJSON(LS_KEYS.quizFavorites, favorites)
 }

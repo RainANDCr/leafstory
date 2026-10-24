@@ -16,12 +16,13 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { LoadingState } from '@/components/feedback/LoadingState'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { InteractIcon, LeafIcon, MailIcon } from '@/components/layout/icons'
+import { LeafIcon, MailIcon } from '@/components/layout/icons'
 import { WishFormDialog } from '@/features/wishes/WishFormDialog'
 import { WishLinkDialog } from '@/features/wishes/WishLinkDialog'
 import { FallingLeafToast } from '@/features/wishes/FallingLeafToast'
 import { LetterComposeDialog } from '@/features/letters/LetterComposeDialog'
 import { LetterReadDialog } from '@/features/letters/LetterReadDialog'
+import { QuizPanel } from '@/features/quiz/QuizPanel'
 import { formatUnlockTime, isUnlocked, remainingText } from '@/features/letters/time'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useCoupleSnapshot, partnerOf } from '@/features/couple/useCoupleSnapshot'
@@ -49,7 +50,7 @@ import { formatDateHuman } from '@/lib/dates'
 import { getErrorMessage } from '@/lib/errors'
 import { t, zhCN } from '@/i18n'
 
-type Tab = 'wishes' | 'letters'
+type Tab = 'wishes' | 'letters' | 'quiz'
 type WishFilter = 'all' | 'open' | 'done'
 
 const STATUS_LABEL: Record<WishStatus, string> = {
@@ -268,11 +269,12 @@ export function InteractPage() {
       />
 
       {/* 标签切换 */}
-      <div className="mb-4 flex w-fit rounded-2xl bg-paper-deep p-1 text-sm" role="tablist">
+      <div className="mb-4 flex w-fit max-w-full flex-wrap rounded-2xl bg-paper-deep p-1 text-sm" role="tablist">
         {(
           [
             ['wishes', t('interact.tabWishes')],
             ['letters', t('interact.tabLetters')],
+            ['quiz', t('quiz.title')],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -413,7 +415,7 @@ export function InteractPage() {
             </ul>
           )}
         </>
-      ) : (
+      ) : tab === 'letters' ? (
         <>
           {anyArrived ? (
             <p role="status" className="mb-4 rounded-2xl border border-leaf-gold/50 bg-leaf-gold/10 px-4 py-2.5 text-sm text-bark">
@@ -504,22 +506,9 @@ export function InteractPage() {
           ) : null}
           <p className="mt-4 text-xs leading-5 text-bark-soft">{t('letters.sealHint')}</p>
         </>
+      ) : (
+        <QuizPanel />
       )}
-
-      {/* 默契问答预告 */}
-      <Card className="mt-6 !p-4">
-        <div className="flex items-center gap-3.5">
-          <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-maple/15 text-maple">
-            <InteractIcon className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="font-display text-base text-bark">{t('interact.quiz')}</p>
-            <p className="mt-0.5 text-xs text-bark-soft">
-              {t('interact.quizDesc')}（{t('interact.stageNoticeQuiz')}）
-            </p>
-          </div>
-        </div>
-      </Card>
 
       {/* 对话框们 */}
       <WishFormDialog

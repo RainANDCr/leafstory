@@ -2,7 +2,7 @@
 
 > 迁移文件位于 `supabase/migrations/`，只做增量演进，不修改历史迁移。
 
-## 当前（阶段 3 · 迁移 00001–00004）
+## 当前（阶段 4 · 迁移 00001–00005）
 
 ### profiles — 用户档案
 
@@ -94,6 +94,18 @@ letters（**封套**）：couple_id、author_id、recipient（partner=写给对�
 letter_contents（**正文**）：letter_id PK FK、title ≤80、body ≤10000。**无任何 SELECT/UPDATE/DELETE 策略**——唯一读入口是 `read_letter` RPC（成员身份 + 服务端时间 ≥ unlock_at + 收件规则 + 状态），唯一写入口是作者插入（封存时一次写入）。
 RPC：`read_letter` / `revoke_letter`（作者 + 到期前 + FOR UPDATE 锁），均 SECURITY DEFINER、search_path=''、仅 authenticated。
 时间语义：unlock_at 存 UTC，展示按用户时区（`src/features/letters/time.ts` 统一换算）。
+
+### places / diary_place_links — 地点足迹（00005）
+
+places：name ≤60、region ≤60?（默认城市级）、note?、happened_on?、latitude/longitude（numeric(9,6)，**可选**，仅用户主动提供）、is_special + special_label ≤20?。RLS：空间成员共享读写；绝无自动定位/轨迹。
+diary_place_links：(place_id, diary_entry_id) PK，两侧级联删除。**SELECT 策略要求关联日记对当前用户可见**（作者或共享已发布）——私密日记的关联行仅作者可见，不透过地图泄露；插入前服务层整体预检（同空间 + 可见），失败回滚不留半成品。
+
+### question_bank / question_sessions / question_answers / question_favorites — 默契小问答（00005）
+
+question_bank：24 题种子（四类：light/memory/future/know，固定 UUID，与前端 questionBank.ts 一致）。
+question_sessions：couple_id、question_id、status（open/revealed）、started_by、ended_early_by。
+question_answers：unique(session_id, author_id)、content ≤500、emoji?、submitted、submitted_at。**两阶段可见性 SELECT 策略**：我的答案随时可读；对方的答案仅当「对方 submitted=true ∧ 我存在 submitted=true 的答案」时可读——草稿永不可见，直连 REST 也无法绕过。
+question_favorites：unique(session_id) 收藏为日记的登记。
 
 ### RPC（00002，均为 SECURITY DEFINER，search_path=''，仅 authenticated 可执行）
 
