@@ -1,0 +1,53 @@
+/*
+ * 全局样式：基础排版、纸张质感、焦点可见性、减少动态效果。
+ * 组件样式优先使用 Tailwind 工具类 + tokens.css 中的令牌。
+ */
+@import "./tokens.css";
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  color: var(--color-bark);
+  background-color: var(--color-paper);
+  /* 轻微纸张颗粒纹理：内联 SVG 噪点，极低透明度，不依赖外部资源 */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+}
+
+::selection {
+  background-color: var(--color-leaf-gold-soft);
+  color: var(--color-bark-deep);
+}
+
+/* 键盘可达性：统一的焦点环 */
+:focus-visible {
+  outline: 2px solid var(--color-bark);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 无障碍：尊重系统的减少动态效果偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 移动端安全区辅助（底部导航使用） */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

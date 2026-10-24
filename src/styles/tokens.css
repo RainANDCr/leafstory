@@ -1,0 +1,40 @@
+/*
+ * 设计令牌（Design Tokens）——《落叶物语》
+ *
+ * 所有颜色、字体、圆角、阴影集中于此，通过 Tailwind CSS v4 的 @theme
+ * 生成工具类（如 bg-paper、text-bark、font-display）。
+ * 视觉基调：温暖纸张米白 + 树皮深棕 + 落叶金 + 森林绿，克制的绘本感。
+ */
+@import "tailwindcss";
+
+@theme {
+  /* 基础色板 */
+  --color-paper: #f8f4eb; /* 纸张米白：页面底色 */
+  --color-paper-deep: #f1eadb; /* 米白加深：分区底色 */
+  --color-paper-edge: #e7dfd2; /* 浅纸边：描边、分隔 */
+  --color-card: #fffdf6; /* 卡片纸面 */
+
+  --color-bark: #594638; /* 树皮深棕：主文字 */
+  --color-bark-deep: #463729; /* 深棕加深：hover、强调 */
+  --color-bark-soft: #7d6b58; /* 柔和棕：次要文字 */
+
+  --color-leaf-gold: #c99d4a; /* 落叶金：点缀、活动态 */
+  --color-leaf-gold-soft: #e6cd97; /* 浅金：弱化背景 */
+
+  --color-maple: #b96f57; /* 枫红：纪念、心动 */
+  --color-forest: #75816b; /* 森林绿：自然、和平 */
+  --color-forest-deep: #5f6a57; /* 深绿：hover */
+
+  /* 字体：优先系统自带的中文字体，标题用衬线体带一点手写感；
+     不引入无法合法分发的商用字体 */
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Source Han Sans SC",
+    "Noto Sans SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --font-display: "Noto Serif SC", "Source Han Serif SC", "Songti SC",
+    "STSong", "SimSun", serif;
+
+  /* 圆角与阴影：柔和、纸感 */
+  --radius-card: 1rem;
+  --radius-leaf: 1.25rem;
+  --shadow-soft: 0 1px 2px rgb(89 70 56 / 0.06), 0 4px 16px rgb(89 70 56 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(89 70 56 / 0.08), 0 10px 28px rgb(89 70 56 / 0.12);
+}

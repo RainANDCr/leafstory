@@ -1,0 +1,42 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+dist-ssr/
+coverage/
+
+# 环境变量与密钥（.env.example 保留，其余一律不提交）
+.env
+.env.*
+!.env.example
+
+# 本地私有数据：真实照片、导出内容、用户数据，一律不入库
+*.local
+private/
+
+# 日志
+*.log
+npm-debug.log*
+
+# 编辑器与系统文件
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Supabase 本地运行时文件
+supabase/.branches/
+supabase/.temp/
+
+# Capacitor / Android 构建产物（阶段 7 生成，产物不入库）
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+*.keystore
+*.jks
+
+# Vite / TypeScript
+*.tsbuildinfo
